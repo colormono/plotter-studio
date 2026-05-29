@@ -1,4 +1,5 @@
-import { PlotterDocument, Layer, PAPER_DIMENSIONS } from '../../types'
+import { PlotterDocument, Layer } from '../../types'
+import { getPaperDimensions } from '../paper'
 import { Board } from '../tictactoe'
 import { svgEl } from '../svg'
 import { Module } from '../../types'
@@ -12,7 +13,7 @@ export interface TicTacToeConfig {
 const SW = '0.5'
 
 function boardLayout(doc: PlotterDocument) {
-  const { width, height } = PAPER_DIMENSIONS[doc.paperFormat]
+  const { width, height } = getPaperDimensions(doc)
   const size = Math.min(width, height) * 0.65
   const x = (width - size) / 2
   const y = (height - size) / 2

@@ -1,6 +1,7 @@
-import { PlotterDocument, Layer, PAPER_DIMENSIONS } from '../types'
+import { PlotterDocument, Layer } from '../types'
 import { MODULES } from './modules'
 import { SVG_NS, sanitize } from './svg'
+import { getPaperDimensions } from './paper'
 
 /**
  * Builds a sanitized SVG string ready for plotter export.
@@ -9,7 +10,7 @@ import { SVG_NS, sanitize } from './svg'
  * Passes through the sanitizer before serialization.
  */
 export function buildExportSvg(doc: PlotterDocument, layers: Layer[]): string {
-  const { width, height } = PAPER_DIMENSIONS[doc.paperFormat]
+  const { width, height } = getPaperDimensions(doc)
 
   const root = document.createElementNS(SVG_NS, 'svg') as SVGElement
   root.setAttribute('xmlns', SVG_NS)
@@ -32,7 +33,10 @@ export function buildExportSvg(doc: PlotterDocument, layers: Layer[]): string {
     g.setAttribute('stroke', layer.penColor)
     g.setAttribute('fill', 'none')
 
-    for (const el of elements) g.appendChild(el)
+    for (const el of elements) {
+      // Clone so export never moves nodes already mounted in the canvas.
+      g.appendChild(el.cloneNode(true))
+    }
     root.appendChild(g)
   }
 

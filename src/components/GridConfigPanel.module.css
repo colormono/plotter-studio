@@ -256,3 +256,54 @@ input[type='range'] {
   border-color: #663333;
   color: #cc6666;
 }
+
+.regenBtn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #888;
+  font-size: 1rem;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.regenBtn:hover {
+  color: #ccc;
+  border-color: #444;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: #555;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: #aaa;
+}
+
+.num {
+  color: #888;
+  font-weight: 500;
+}
+
+.warn {
+  font-size: 0.75rem;
+  color: #c96;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.ok {
+  font-size: 0.75rem;
+  color: #6a8;
+  margin: 0;
+  line-height: 1.4;
+}

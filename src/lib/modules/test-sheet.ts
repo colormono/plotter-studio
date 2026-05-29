@@ -1,4 +1,5 @@
-import { PlotterDocument, Layer, PAPER_DIMENSIONS, Module } from '../../types'
+import { PlotterDocument, Layer, Module } from '../../types'
+import { getPaperDimensions } from '../paper'
 import { svgEl } from '../svg'
 
 const MARGIN = 10
@@ -54,7 +55,7 @@ function renderRegistrationCrosses(x: number, y: number, w: number, h: number): 
 }
 
 function renderLabel(doc: PlotterDocument, x: number, y: number, w: number): SVGElement {
-  const { width, height } = PAPER_DIMENSIONS[doc.paperFormat]
+  const { width, height } = getPaperDimensions(doc)
   const label = `${doc.paperFormat} \u2014 ${width}\u00d7${height}mm`
   const el = svgEl('text', {
     x: x + w / 2,
@@ -73,7 +74,7 @@ export const testSheetModule: Module = {
   id: 'test-sheet',
 
   render(doc: PlotterDocument, _layer: Layer): SVGElement[] {
-    const { width, height } = PAPER_DIMENSIONS[doc.paperFormat]
+    const { width, height } = getPaperDimensions(doc)
     const x = MARGIN
     const y = MARGIN
     const w = width - 2 * MARGIN

@@ -1,4 +1,12 @@
 import { PlotterDocument } from '../types'
+import { migrateDocument, isModernDocument } from './migrate-document'
+
+export function normalizeDocument(doc: PlotterDocument): PlotterDocument {
+  return {
+    ...doc,
+    landscape: doc.landscape ?? false,
+  }
+}
 
 export const AUTOSAVE_KEY = 'plotter-studio:autosave'
 
@@ -22,7 +30,7 @@ function validate(data: unknown): PlotterDocument {
   }
   const obj = data as Record<string, unknown>
 
-  const required = ['id', 'name', 'version', 'paperFormat', 'maxGridDepth', 'layers'] as const
+  const required = ['id', 'name', 'version', 'paperFormat', 'layers'] as const
   for (const field of required) {
     if (!(field in obj)) {
       throw new Error(`Invalid document: missing required field "${field}"`)
@@ -37,7 +45,11 @@ function validate(data: unknown): PlotterDocument {
     throw new Error('Invalid document: "layers" must be an array')
   }
 
-  return data as PlotterDocument
+  if (isModernDocument(obj)) {
+    return normalizeDocument(obj as unknown as PlotterDocument)
+  }
+
+  return migrateDocument(obj as unknown as Parameters<typeof migrateDocument>[0])
 }
 
 export function downloadDocument(doc: PlotterDocument): void {

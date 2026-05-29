@@ -1,15 +1,24 @@
 import { useState, useRef, KeyboardEvent } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Layer, Technique } from '../types'
+import { Layer } from '../types'
 import { useDocumentStore } from '../store/document'
-import styles from './LayerItem.module.css'
+import { isGridSemanticLayer } from '../lib/grid-layers'
 
-const TECHNIQUES: { value: Technique; label: string }[] = [
-  { value: 'draw', label: 'Draw' },
-  { value: 'cut', label: 'Cut' },
-  { value: 'mixed', label: 'Mixed' },
-]
+const PEN_LABELS: Record<string, string> = {
+  cut: 'rojo · corte',
+  frame: 'negro · 0.30mm',
+  fill: 'negro · 0.30mm',
+  organic: 'negro · 0.30mm',
+  accent: 'azul · 0.30mm',
+}
+
+function penLabel(layer: Layer): string {
+  if (layer.gridRole && PEN_LABELS[layer.gridRole]) return PEN_LABELS[layer.gridRole]!
+  if (layer.technique === 'cut') return 'rojo · corte'
+  if (layer.technique === 'mixed') return 'azul · 0.30mm'
+  return 'negro · 0.30mm'
+}
 
 interface LayerItemProps {
   layer: Layer
@@ -19,8 +28,8 @@ interface LayerItemProps {
 export function LayerItem({ layer, isActive }: LayerItemProps) {
   const updateLayer = useDocumentStore((s) => s.updateLayer)
   const removeLayer = useDocumentStore((s) => s.removeLayer)
-  const duplicateLayer = useDocumentStore((s) => s.duplicateLayer)
   const setActiveLayer = useDocumentStore((s) => s.setActiveLayer)
+  const isFixedGrid = isGridSemanticLayer(layer)
 
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(layer.name)
@@ -51,15 +60,9 @@ export function LayerItem({ layer, isActive }: LayerItemProps) {
     }
   }
 
-  function startEditing() {
-    setDraft(layer.name)
-    setEditing(true)
-    requestAnimationFrame(() => inputRef.current?.select())
-  }
-
-  function handleDelete() {
-    const hasContent = layer.moduleConfig && Object.keys(layer.moduleConfig).length > 0
-    if (hasContent && !confirm(`Delete layer "${layer.name}"?`)) return
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm(`¿Eliminar capa "${layer.name}"?`)) return
     removeLayer(layer.id)
   }
 
@@ -67,55 +70,39 @@ export function LayerItem({ layer, isActive }: LayerItemProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`${styles.item} ${isActive ? styles.active : ''}`}
+      className={
+        'layer' +
+        (isActive ? ' is-sel' : '') +
+        (layer.visible ? '' : ' is-hidden')
+      }
       onClick={() => setActiveLayer(layer.id)}
     >
-      {/* Drag handle */}
       <button
-        className={styles.dragHandle}
+        type="button"
+        className="grip"
         {...attributes}
         {...listeners}
-        aria-label="Drag to reorder"
-        tabIndex={0}
+        aria-label="Arrastrar para reordenar"
       >
         ⠿
       </button>
 
-      {/* Visibility toggle */}
-      <button
-        className={`${styles.visToggle} ${layer.visible ? '' : styles.hidden}`}
-        onClick={(e) => {
-          e.stopPropagation()
-          updateLayer(layer.id, { visible: !layer.visible })
-        }}
-        aria-label={layer.visible ? 'Hide layer' : 'Show layer'}
-        title={layer.visible ? 'Hide' : 'Show'}
-      >
-        {layer.visible ? '👁' : '○'}
-      </button>
-
-      {/* Color swatch */}
-      <label
-        className={styles.colorLabel}
-        title="Pen color"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <span className={styles.colorSwatch} style={{ background: layer.penColor }} />
+      <label className="pen-wrap" title="Color de pluma" onClick={(e) => e.stopPropagation()}>
+        <span className="pen" style={{ background: layer.penColor }} />
         <input
           type="color"
           value={layer.penColor}
           onChange={(e) => updateLayer(layer.id, { penColor: e.target.value })}
-          className={styles.colorInput}
-          aria-label="Pen color"
+          className="pen-input"
+          aria-label="Color de pluma"
         />
       </label>
 
-      {/* Name */}
-      <div className={styles.nameWrap}>
+      <span className="lmeta">
         {editing ? (
           <input
             ref={inputRef}
-            className={styles.nameInput}
+            className="lname-input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={commitRename}
@@ -124,52 +111,41 @@ export function LayerItem({ layer, isActive }: LayerItemProps) {
             autoFocus
           />
         ) : (
-          <span className={styles.name} onDoubleClick={startEditing} title="Double-click to rename">
+          <span
+            className="lname"
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              setDraft(layer.name)
+              setEditing(true)
+              requestAnimationFrame(() => inputRef.current?.select())
+            }}
+          >
             {layer.name}
           </span>
         )}
-      </div>
+        <span className="ltech">{penLabel(layer)}</span>
+      </span>
 
-      {/* Technique selector */}
-      <select
-        className={styles.technique}
-        value={layer.technique}
-        onChange={(e) => updateLayer(layer.id, { technique: e.target.value as Technique })}
-        onClick={(e) => e.stopPropagation()}
-        aria-label="Technique"
+      <span className="tech-tag">{layer.technique}</span>
+
+      <button
+        type="button"
+        className="eye"
+        onClick={(e) => {
+          e.stopPropagation()
+          updateLayer(layer.id, { visible: !layer.visible })
+        }}
+        aria-label={layer.visible ? 'Ocultar capa' : 'Mostrar capa'}
+        title={layer.visible ? 'Ocultar' : 'Mostrar'}
       >
-        {TECHNIQUES.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.label}
-          </option>
-        ))}
-      </select>
+        {layer.visible ? '👁' : '○'}
+      </button>
 
-      {/* Actions */}
-      <div className={styles.actions}>
-        <button
-          className={styles.actionBtn}
-          onClick={(e) => {
-            e.stopPropagation()
-            duplicateLayer(layer.id)
-          }}
-          title="Duplicate layer"
-          aria-label="Duplicate"
-        >
-          ⧉
-        </button>
-        <button
-          className={`${styles.actionBtn} ${styles.deleteBtn}`}
-          onClick={(e) => {
-            e.stopPropagation()
-            handleDelete()
-          }}
-          title="Delete layer"
-          aria-label="Delete"
-        >
+      {!isFixedGrid && (
+        <button type="button" className="delete" onClick={handleDelete} aria-label="Eliminar capa">
           ✕
         </button>
-      </div>
+      )}
     </div>
   )
 }

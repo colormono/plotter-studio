@@ -1,78 +1,59 @@
 import { useDocumentStore } from '../store/document'
 import { COLLECTIONS } from '../lib/collections'
-import styles from './CollectionsPanel.module.css'
 
 export function CollectionsPanel() {
   const document = useDocumentStore((s) => s.document)
-  const activeLayerId = useDocumentStore((s) => s.activeLayerId)
-  const updateLayer = useDocumentStore((s) => s.updateLayer)
+  const updateCollection = useDocumentStore((s) => s.updateCollection)
 
   if (!document) return null
 
-  const activeLayer = document.layers.find((l) => l.id === activeLayerId)
-
-  if (!activeLayer) {
-    return (
-      <div className={styles.panel}>
-        <div className={styles.header}>
-          <span className={styles.label}>Collections</span>
-        </div>
-        <p className={styles.empty}>Select a layer to assign collections.</p>
-      </div>
-    )
-  }
-
-  const isMixed = activeLayer.technique === 'mixed'
+  const activeCount = document.collections.filter((c) => c.on).length
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <span className={styles.label}>Collections</span>
-        <span className={styles.layerName}>{activeLayer.name}</span>
+    <div className="sec">
+      <div className="sec__h">
+        <span className="sec__t">Colecciones</span>
+        <span className="sec__t" style={{ letterSpacing: 0 }}>
+          {activeCount}/{document.collections.length}
+        </span>
       </div>
-
-      <div className={styles.body}>
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>
-            {isMixed ? 'Draw collection' : 'Primary collection'}
-          </span>
-          <div className={styles.selectRow}>
-            {COLLECTIONS.map((col) => (
-              <button
-                key={col.id}
-                className={`${styles.colBtn} ${activeLayer.primaryCollection === col.id ? styles.selected : ''}`}
-                onClick={() => updateLayer(activeLayer.id, { primaryCollection: col.id })}
-                title={col.label}
-              >
-                {col.label}
-              </button>
-            ))}
-          </div>
-        </label>
-
-        <label className={styles.field}>
-          <span className={styles.fieldLabel}>
-            {isMixed ? 'Cut collection' : 'Secondary collection'}
-          </span>
-          <div className={styles.selectRow}>
-            <button
-              className={`${styles.colBtn} ${activeLayer.secondaryCollection === null ? styles.selected : ''}`}
-              onClick={() => updateLayer(activeLayer.id, { secondaryCollection: null })}
+      <div className="colls">
+        {document.collections.map((cw) => {
+          const meta = COLLECTIONS.find((c) => c.id === cw.id)
+          return (
+            <div
+              key={cw.id}
+              className={'coll' + (cw.on ? '' : ' is-off')}
+              onClick={() => updateCollection(cw.id, { on: !cw.on })}
+              onKeyDown={(e) => e.key === 'Enter' && updateCollection(cw.id, { on: !cw.on })}
+              role="button"
+              tabIndex={0}
             >
-              None
-            </button>
-            {COLLECTIONS.map((col) => (
-              <button
-                key={col.id}
-                className={`${styles.colBtn} ${activeLayer.secondaryCollection === col.id ? styles.selected : ''}`}
-                onClick={() => updateLayer(activeLayer.id, { secondaryCollection: col.id })}
-                title={col.label}
+              <span className={'check' + (cw.on ? ' on' : '')} aria-hidden />
+              <div className="cmeta">
+                <div className="cname">{meta?.label ?? cw.id}</div>
+                <div className="cwt">peso {cw.weight}</div>
+              </div>
+              <div
+                className="wt"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               >
-                {col.label}
-              </button>
-            ))}
-          </div>
-        </label>
+                <input
+                  className="rg"
+                  type="range"
+                  min={1}
+                  max={6}
+                  step={1}
+                  value={cw.weight}
+                  disabled={!cw.on}
+                  onChange={(e) => updateCollection(cw.id, { weight: +e.target.value })}
+                  aria-label={`Peso de ${cw.id}`}
+                />
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

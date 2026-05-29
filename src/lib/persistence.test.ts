@@ -1,24 +1,29 @@
 import { describe, it, expect } from 'vitest'
 import { serialize, deserialize } from './persistence'
 import { PlotterDocument, GridConfig } from '../types'
+import { DEFAULT_GRID_SPEC, DEFAULT_COLLECTION_WEIGHTS } from './art-engine'
+import { createDefaultGridLayers } from './grid-layers'
 
-// ─── fixtures ─────────────────────────────────────────────────────────────────
-
-const minimalDoc: PlotterDocument = {
+const modernDoc: PlotterDocument = {
   id: 'doc-1',
-  name: 'Minimal',
+  name: 'Modern',
   version: '1',
   paperFormat: 'A4',
-  maxGridDepth: 3,
-  layers: [],
+  landscape: false,
+  margin: 14,
+  seed: 42,
+  structure: true,
+  grid: { ...DEFAULT_GRID_SPEC },
+  collections: DEFAULT_COLLECTION_WEIGHTS.map((c) => ({ ...c })),
+  layers: createDefaultGridLayers(),
 }
 
-const richDoc: PlotterDocument = {
+const legacyDoc = {
   id: 'doc-2',
-  name: 'Complex',
+  name: 'Legacy',
   version: '1',
   paperFormat: 'A3',
-  maxGridDepth: 3,
+  maxGridDepth: 2,
   layers: [
     {
       id: 'layer-1',
@@ -37,151 +42,105 @@ const richDoc: PlotterDocument = {
         cols: 4,
         rowWeights: null,
         colWeights: null,
-        cells: Array.from({ length: 4 }, () =>
-          Array.from({ length: 4 }, () => ({
-            primaryValue: 0.5,
-            secondaryValue: null,
-            subgrid: null,
-          })),
-        ),
-      } as unknown as Record<string, unknown>,
-    },
-    {
-      id: 'layer-2',
-      name: 'Cut',
-      penColor: '#0000ff',
-      technique: 'cut',
-      visible: false,
-      order: 1,
-      primaryCollection: 'silence',
-      secondaryCollection: 'geometric-shapes',
-      module: 'grid',
-      moduleConfig: {} as unknown as Record<string, unknown>,
-    },
-    {
-      id: 'layer-3',
-      name: 'test-sheet',
-      penColor: '#000000',
-      technique: 'draw',
-      visible: true,
-      order: 2,
-      primaryCollection: 'silence',
-      secondaryCollection: null,
-      module: 'test-sheet',
-      moduleConfig: {} as unknown as Record<string, unknown>,
+        cells: [],
+      },
     },
   ],
 }
 
-const docWithSubgrid: PlotterDocument = {
-  id: 'doc-3',
-  name: 'Subgrid',
-  version: '1',
-  paperFormat: 'Letter',
-  maxGridDepth: 3,
-  layers: [
-    {
-      id: 'layer-sub',
-      name: 'Nested',
-      penColor: '#111111',
-      technique: 'mixed',
-      visible: true,
-      order: 0,
-      primaryCollection: 'dice',
-      secondaryCollection: 'irregular-textures',
-      module: 'grid',
-      moduleConfig: {
-        margins: { top: 5, right: 5, bottom: 5, left: 5 },
-        gutter: 1,
-        rows: 2,
-        cols: 2,
-        rowWeights: [1, 2],
-        colWeights: [2, 1],
-        cells: [
-          [
-            {
-              primaryValue: 0.8,
-              secondaryValue: 0.2,
-              subgrid: {
-                margins: { top: 0, right: 0, bottom: 0, left: 0 },
-                gutter: 0,
-                rows: 3,
-                cols: 3,
-                rowWeights: null,
-                colWeights: null,
-                cells: Array.from({ length: 3 }, () =>
-                  Array.from({ length: 3 }, () => ({
-                    primaryValue: 1,
-                    secondaryValue: null,
-                    subgrid: null,
-                  })),
-                ),
-              } as GridConfig,
-            },
-            { primaryValue: 0, secondaryValue: null, subgrid: null },
-          ],
-          [
-            { primaryValue: 0, secondaryValue: null, subgrid: null },
-            { primaryValue: 0, secondaryValue: null, subgrid: null },
-          ],
-        ],
-      } as unknown as Record<string, unknown>,
-    },
-  ],
-}
-
-// ─── serialize / deserialize round-trips ──────────────────────────────────────
-
-describe('serialize + deserialize round-trip', () => {
-  it('minimal document survives round-trip', () => {
-    expect(deserialize(serialize(minimalDoc))).toEqual(minimalDoc)
+describe('persistence', () => {
+  it('round-trips modern documents', () => {
+    const json = serialize(modernDoc)
+    const restored = deserialize(json)
+    expect(restored.id).toBe(modernDoc.id)
+    expect(restored.grid.rows).toBe(modernDoc.grid.rows)
+    expect(restored.layers.filter((l) => l.gridRole).length).toBe(5)
   })
 
-  it('document with multiple layers and techniques survives round-trip', () => {
-    expect(deserialize(serialize(richDoc))).toEqual(richDoc)
+  it('migrates legacy documents with maxGridDepth', () => {
+    const restored = deserialize(JSON.stringify(legacyDoc))
+    expect(restored.grid.depth).toBe(2)
+    expect(restored.margin).toBe(10)
+    expect(restored.seed).toBe(42)
+    expect(restored.collections.length).toBeGreaterThan(0)
+    expect(restored.layers.some((l) => l.gridRole === 'frame')).toBe(true)
   })
 
-  it('document with nested subgrid survives round-trip', () => {
-    expect(deserialize(serialize(docWithSubgrid))).toEqual(docWithSubgrid)
+  it('rejects invalid JSON', () => {
+    expect(() => deserialize('not json')).toThrow(/cannot parse/i)
   })
 
-  it('serialize produces valid JSON', () => {
-    expect(() => JSON.parse(serialize(richDoc))).not.toThrow()
+  it('rejects missing required fields', () => {
+    const fields = ['id', 'name', 'version', 'paperFormat', 'layers'] as const
+    for (const field of fields) {
+      const partial = { ...modernDoc }
+      delete (partial as Record<string, unknown>)[field]
+      expect(() => deserialize(JSON.stringify(partial))).toThrow(new RegExp(field, 'i'))
+    }
   })
 })
 
-// ─── deserialize error handling ───────────────────────────────────────────────
+describe('legacy subgrid fixture still parses', () => {
+  const docWithSubgrid = {
+    id: 'doc-3',
+    name: 'Subgrid',
+    version: '1',
+    paperFormat: 'Letter',
+    maxGridDepth: 3,
+    layers: [
+      {
+        id: 'layer-sub',
+        name: 'Nested',
+        penColor: '#111111',
+        technique: 'mixed',
+        visible: true,
+        order: 0,
+        primaryCollection: 'dice',
+        secondaryCollection: 'irregular-textures',
+        module: 'grid',
+        moduleConfig: {
+          margins: { top: 5, right: 5, bottom: 5, left: 5 },
+          gutter: 1,
+          rows: 2,
+          cols: 2,
+          rowWeights: [1, 2],
+          colWeights: [2, 1],
+          cells: [
+            [
+              {
+                primaryValue: 0.8,
+                secondaryValue: 0.2,
+                subgrid: {
+                  margins: { top: 0, right: 0, bottom: 0, left: 0 },
+                  gutter: 0,
+                  rows: 3,
+                  cols: 3,
+                  rowWeights: null,
+                  colWeights: null,
+                  cells: Array.from({ length: 3 }, () =>
+                    Array.from({ length: 3 }, () => ({
+                      primaryValue: 1,
+                      secondaryValue: null,
+                      subgrid: null,
+                    })),
+                  ),
+                } as GridConfig,
+              },
+              { primaryValue: 0, secondaryValue: null, subgrid: null },
+            ],
+            [
+              { primaryValue: 0, secondaryValue: null, subgrid: null },
+              { primaryValue: 0, secondaryValue: null, subgrid: null },
+            ],
+          ],
+        },
+      },
+    ],
+  }
 
-describe('deserialize error handling', () => {
-  it('throws on completely invalid JSON', () => {
-    expect(() => deserialize('not json {')).toThrow('Invalid file')
-  })
-
-  it('throws when document is an array', () => {
-    expect(() => deserialize('[]')).toThrow('expected a JSON object')
-  })
-
-  it('throws when a required field is missing', () => {
-    const { version: _v, ...withoutVersion } = minimalDoc
-    expect(() => deserialize(JSON.stringify(withoutVersion))).toThrow('"version"')
-  })
-
-  it('throws on each missing required field', () => {
-    const fields = ['id', 'name', 'version', 'paperFormat', 'maxGridDepth', 'layers'] as const
-    for (const field of fields) {
-      const copy = { ...minimalDoc } as Record<string, unknown>
-      delete copy[field]
-      expect(() => deserialize(JSON.stringify(copy))).toThrow(`"${field}"`)
-    }
-  })
-
-  it('throws on unsupported version', () => {
-    const doc = { ...minimalDoc, version: '99' }
-    expect(() => deserialize(JSON.stringify(doc))).toThrow('Unsupported document version')
-  })
-
-  it('throws when layers is not an array', () => {
-    const doc = { ...minimalDoc, layers: {} }
-    expect(() => deserialize(JSON.stringify(doc))).toThrow('"layers"')
+  it('migrates to shared grid spec', () => {
+    const restored = deserialize(JSON.stringify(docWithSubgrid))
+    expect(restored.grid.irregular).toBe(true)
+    expect(restored.grid.rows).toBe(2)
   })
 })

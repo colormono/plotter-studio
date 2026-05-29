@@ -31,8 +31,29 @@
   padding: 0.1rem 0.4rem;
 }
 
-.exportBtn {
+.meta {
   margin-left: auto;
+  font-size: 0.75rem;
+  color: #555;
+}
+
+.regenBtn {
+  font-size: 0.8125rem;
+  background: none;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #888;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.regenBtn:hover {
+  color: #e0e0e0;
+  border-color: #444;
+}
+
+.exportBtn {
   font-size: 0.8125rem;
   background: none;
   border: 1px solid #2a4a2a;

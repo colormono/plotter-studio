@@ -1,13 +1,12 @@
 import { useDocumentStore } from '../store/document'
 import { TicTacToeConfig } from '../lib/modules/tictactoe'
 import { gameResult } from '../lib/tictactoe'
-import styles from './TicTacToePanel.module.css'
 
 const RESULT_LABELS: Record<string, string> = {
-  X: 'X wins',
-  O: 'O wins',
-  draw: 'Draw',
-  'in-progress': 'In progress',
+  X: 'Gana X',
+  O: 'Gana O',
+  draw: 'Empate',
+  'in-progress': 'En curso',
 }
 
 export function TicTacToePanel() {
@@ -17,41 +16,63 @@ export function TicTacToePanel() {
 
   if (!document || !activeLayerId) return null
   const activeLayer = document.layers.find((l) => l.id === activeLayerId)
-  if (!activeLayer || activeLayer.module !== 'tictactoe') return null
+  if (!activeLayer || activeLayer.module !== 'tictactoe') {
+    return (
+      <div className="sec">
+        <div className="sec__h">
+          <span className="sec__t">tictactoe</span>
+        </div>
+        <p className="help">Selecciona una capa tictactoe o añade el módulo desde el panel de capas.</p>
+      </div>
+    )
+  }
 
   const config = activeLayer.moduleConfig as unknown as TicTacToeConfig
   const result = gameResult(config.board)
+  const resultKey = result.replace('-', '')
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <span className={styles.label}>Tictactoe</span>
-        <span className={styles.layerName}>{activeLayer.name}</span>
+    <div className="sec">
+      <div className="sec__h">
+        <span className="sec__t">tictactoe</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--mute)' }}>
+          {activeLayer.name}
+        </span>
       </div>
 
-      <div className={styles.body}>
-        <div className={styles.info}>
-          <span className={styles.infoLabel}>Result</span>
-          <span className={`${styles.result} ${styles[result.replace('-', '')]}`}>
-            {RESULT_LABELS[result]}
-          </span>
-        </div>
-
-        <div className={styles.board} aria-label="Game board preview">
-          {config.board.map((cell, i) => (
-            <div key={i} className={styles.cell} aria-label={`Cell ${i + 1}: ${cell ?? 'empty'}`}>
-              {cell}
-            </div>
-          ))}
-        </div>
-
-        <button
-          className={styles.regenBtn}
-          onClick={() => regenerateTicTacToe(activeLayerId)}
+      <div className="ctl-h">
+        <span className="lbl">Resultado</span>
+        <span
+          className="num"
+          style={{
+            color:
+              resultKey === 'X'
+                ? '#2563eb'
+                : resultKey === 'O'
+                  ? '#ea580c'
+                  : 'var(--ink)',
+          }}
         >
-          Regenerar
-        </button>
+          {RESULT_LABELS[result]}
+        </span>
       </div>
+
+      <div className="ttt-board" aria-label="Vista previa del tablero">
+        {config.board.map((cell, i) => (
+          <div key={i} className="ttt-cell" aria-label={`Celda ${i + 1}: ${cell ?? 'vacía'}`}>
+            {cell}
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="btn btn--primary"
+        style={{ alignSelf: 'flex-start' }}
+        onClick={() => regenerateTicTacToe(activeLayerId)}
+      >
+        Regenerar
+      </button>
     </div>
   )
 }

@@ -17,4 +17,8 @@ describe('PAPER_DIMENSIONS', () => {
   it('Legal has correct dimensions in mm', () => {
     expect(PAPER_DIMENSIONS.Legal).toEqual({ width: 216, height: 356 })
   })
+
+  it('Square has 1:1 dimensions in mm', () => {
+    expect(PAPER_DIMENSIONS.Square).toEqual({ width: 210, height: 210 })
+  })
 })

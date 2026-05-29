@@ -15,14 +15,15 @@ import {
 } from '@dnd-kit/sortable'
 import { useDocumentStore } from '../store/document'
 import { LayerItem } from './LayerItem'
-import styles from './LayerPanel.module.css'
 
-export function LayerPanel() {
+interface LayerPanelProps {
+  onAddTictactoe: () => void
+  onAddTestSheet: () => void
+}
+
+export function LayerPanel({ onAddTictactoe, onAddTestSheet }: LayerPanelProps) {
   const document = useDocumentStore((s) => s.document)
   const activeLayerId = useDocumentStore((s) => s.activeLayerId)
-  const addLayer = useDocumentStore((s) => s.addLayer)
-  const addTicTacToeModule = useDocumentStore((s) => s.addTicTacToeModule)
-  const addTestSheetModule = useDocumentStore((s) => s.addTestSheetModule)
   const reorderLayers = useDocumentStore((s) => s.reorderLayers)
 
   const sensors = useSensors(
@@ -44,36 +45,34 @@ export function LayerPanel() {
   }
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.header}>
-        <span className={styles.label}>Layers</span>
-        <button className={styles.addBtn} onClick={addLayer} title="Add grid layer" aria-label="Add layer">
-          +
-        </button>
-        <button
-          className={styles.addTttBtn}
-          onClick={addTicTacToeModule}
-          title="Add tictactoe module"
-          aria-label="Add tictactoe module"
-        >
-          ✕○
-        </button>
-        <button
-          className={styles.addTttBtn}
-          onClick={addTestSheetModule}
-          title="Add test sheet"
-          aria-label="Add test sheet"
-        >
-          ⊕
-        </button>
+    <div className="sec sec--grow">
+      <div className="sec__h">
+        <span className="sec__t">Capas</span>
+        <span style={{ display: 'flex', gap: 4 }}>
+          <button
+            type="button"
+            className="sec__a"
+            onClick={onAddTictactoe}
+            title="Añadir tictactoe"
+            aria-label="Añadir tictactoe"
+          >
+            ✕○
+          </button>
+          <button
+            type="button"
+            className="sec__a"
+            onClick={onAddTestSheet}
+            title="Añadir test sheet"
+            aria-label="Añadir test sheet"
+          >
+            ⊕
+          </button>
+        </span>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-          <div className={styles.list}>
-            {layers.length === 0 && (
-              <p className={styles.empty}>No layers yet. Click + to add one.</p>
-            )}
+          <div className="layers">
             {layers.map((layer) => (
               <LayerItem key={layer.id} layer={layer} isActive={layer.id === activeLayerId} />
             ))}

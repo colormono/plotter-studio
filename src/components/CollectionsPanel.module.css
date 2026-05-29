@@ -85,3 +85,58 @@
   color: #444;
   line-height: 1.5;
 }
+
+.count {
+  font-size: 0.75rem;
+  color: #555;
+}
+
+.hint {
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  color: #555;
+  line-height: 1.45;
+  margin: 0 0 0.25rem;
+}
+
+.collRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.collRow:last-child {
+  border-bottom: none;
+}
+
+.collOff {
+  opacity: 0.45;
+}
+
+.collCheck {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #bbb;
+  cursor: pointer;
+}
+
+.collName {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+.weightField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-left: 1.5rem;
+}
+
+.weightLabel {
+  font-size: 0.7rem;
+  color: #555;
+}
