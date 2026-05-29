@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { PlotterDocument, PaperFormat, Layer, Technique } from '../types'
+import { PlotterDocument, PaperFormat, Layer, Technique, GridConfig } from '../types'
+import { DEFAULT_GRID_CONFIG } from '../lib/modules/grid'
 
 interface DocumentState {
   document: PlotterDocument | null
@@ -8,6 +9,7 @@ interface DocumentState {
   clearDocument: () => void
   addLayer: () => void
   updateLayer: (id: string, patch: Partial<Omit<Layer, 'id'>>) => void
+  updateModuleConfig: (id: string, config: GridConfig) => void
   removeLayer: (id: string) => void
   duplicateLayer: (id: string) => void
   reorderLayers: (orderedIds: string[]) => void
@@ -26,10 +28,10 @@ function makeDefaultLayer(order: number): Layer {
     technique: 'draw' as Technique,
     visible: true,
     order,
-    primaryCollection: 'silence',
+    primaryCollection: 'regular-textures',
     secondaryCollection: null,
     module: 'grid',
-    moduleConfig: {},
+    moduleConfig: DEFAULT_GRID_CONFIG as unknown as Record<string, unknown>,
   }
 }
 
@@ -72,6 +74,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
         document: {
           ...state.document,
           layers: state.document.layers.map((l) => (l.id === id ? { ...l, ...patch } : l)),
+        },
+      }
+    }),
+
+  updateModuleConfig: (id, config) =>
+    set((state) => {
+      if (!state.document) return state
+      return {
+        document: {
+          ...state.document,
+          layers: state.document.layers.map((l) =>
+            l.id === id ? { ...l, moduleConfig: config as unknown as Record<string, unknown> } : l,
+          ),
         },
       }
     }),

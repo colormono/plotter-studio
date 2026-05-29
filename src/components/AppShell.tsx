@@ -1,6 +1,8 @@
 import { useDocumentStore } from '../store/document'
 import { PlotterCanvas } from './PlotterCanvas'
 import { LayerPanel } from './LayerPanel'
+import { CollectionsPanel } from './CollectionsPanel'
+import { GridConfigPanel } from './GridConfigPanel'
 import styles from './AppShell.module.css'
 
 export function AppShell() {
@@ -24,14 +26,15 @@ export function AppShell() {
       <div className={styles.body}>
         <aside className={styles.panelLeft} aria-label="Layers">
           <LayerPanel />
+          <GridConfigPanel />
         </aside>
 
         <main className={styles.canvasArea}>
-          <PlotterCanvas paperFormat={document.paperFormat} layers={visibleLayers} />
+          <PlotterCanvas document={document} layers={visibleLayers} />
         </main>
 
         <aside className={styles.panelRight} aria-label="Properties">
-          <p className={styles.panelLabel}>Properties</p>
+          <CollectionsPanel />
         </aside>
       </div>
     </div>
