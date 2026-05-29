@@ -1,19 +1,30 @@
+import type { LucideIcon } from 'lucide-react'
+import {
+  Box,
+  FileText,
+  GitFork,
+  Grid3x3,
+  Hash,
+  Spline,
+} from 'lucide-react'
+import { Icon } from './Icon'
+
 export type ModuleId = 'grid' | 'tictactoe' | 'test-sheet'
 
 interface ModuleDef {
   id: ModuleId | string
   name: string
-  icon: string
+  icon: LucideIcon
   soon?: boolean
 }
 
 const MODULES: ModuleDef[] = [
-  { id: 'grid', name: 'grid', icon: '⊞' },
-  { id: 'tictactoe', name: 'tictactoe', icon: '✕○' },
-  { id: 'test-sheet', name: 'test-sheet', icon: '⊕' },
-  { id: 'p5', name: 'p5', icon: '∿', soon: true },
-  { id: 'd3', name: 'd3', icon: '⎇', soon: true },
-  { id: 'threejs', name: 'three.js', icon: '◻', soon: true },
+  { id: 'grid', name: 'grid', icon: Grid3x3 },
+  { id: 'tictactoe', name: 'tictactoe', icon: Hash },
+  { id: 'test-sheet', name: 'test-sheet', icon: FileText },
+  { id: 'p5', name: 'p5', icon: Spline, soon: true },
+  { id: 'd3', name: 'd3', icon: GitFork, soon: true },
+  { id: 'threejs', name: 'three.js', icon: Box, soon: true },
 ]
 
 interface ModulePanelProps {
@@ -41,7 +52,7 @@ export function ModulePanel({ activeModule, onModule }: ModulePanelProps) {
             disabled={m.soon}
           >
             <span className="mod-icon" aria-hidden>
-              {m.icon}
+              <Icon icon={m.icon} size={15} strokeWidth={1.75} />
             </span>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{m.name}</span>
             {m.soon && <span className="soon">pronto</span>}

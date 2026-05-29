@@ -1,9 +1,16 @@
+import {
+  GripVertical,
+  Eye,
+  EyeOff,
+  Trash2,
+} from 'lucide-react'
 import { useState, useRef, KeyboardEvent } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Layer } from '../types'
 import { useDocumentStore } from '../store/document'
-import { isGridSemanticLayer } from '../lib/grid-layers'
+import { isFixedLayer } from '../lib/module-layers'
+import { Icon } from './Icon'
 
 const PEN_LABELS: Record<string, string> = {
   cut: 'rojo · corte',
@@ -29,7 +36,7 @@ export function LayerItem({ layer, isActive }: LayerItemProps) {
   const updateLayer = useDocumentStore((s) => s.updateLayer)
   const removeLayer = useDocumentStore((s) => s.removeLayer)
   const setActiveLayer = useDocumentStore((s) => s.setActiveLayer)
-  const isFixedGrid = isGridSemanticLayer(layer)
+  const isFixed = isFixedLayer(layer)
 
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(layer.name)
@@ -84,7 +91,7 @@ export function LayerItem({ layer, isActive }: LayerItemProps) {
         {...listeners}
         aria-label="Arrastrar para reordenar"
       >
-        ⠿
+        <Icon icon={GripVertical} size={13} strokeWidth={1.75} />
       </button>
 
       <label className="pen-wrap" title="Color de pluma" onClick={(e) => e.stopPropagation()}>
@@ -138,12 +145,12 @@ export function LayerItem({ layer, isActive }: LayerItemProps) {
         aria-label={layer.visible ? 'Ocultar capa' : 'Mostrar capa'}
         title={layer.visible ? 'Ocultar' : 'Mostrar'}
       >
-        {layer.visible ? '👁' : '○'}
+        <Icon icon={layer.visible ? Eye : EyeOff} size={14} strokeWidth={1.75} />
       </button>
 
-      {!isFixedGrid && (
+      {!isFixed && (
         <button type="button" className="delete" onClick={handleDelete} aria-label="Eliminar capa">
-          ✕
+          <Icon icon={Trash2} size={13} strokeWidth={1.75} />
         </button>
       )}
     </div>

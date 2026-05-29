@@ -16,13 +16,13 @@ describe('COLLECTIONS', () => {
     expect(COLLECTIONS.length).toBeGreaterThan(0)
   })
 
-  it('contains all five registered collections', () => {
+  it('contains all four registered collections', () => {
     const ids = COLLECTIONS.map((c) => c.id)
-    expect(ids).toContain('silence')
     expect(ids).toContain('regular-textures')
     expect(ids).toContain('geometric-shapes')
     expect(ids).toContain('dice')
     expect(ids).toContain('irregular-textures')
+    expect(ids).not.toContain('silence')
   })
 
   it('every entry has id, label and render function', () => {
@@ -36,12 +36,13 @@ describe('COLLECTIONS', () => {
 
 describe('getCollection', () => {
   it('returns the collection by id', () => {
-    const col = getCollection('silence')
-    expect(col.id).toBe('silence')
+    const col = getCollection('regular-textures')
+    expect(col.id).toBe('regular-textures')
   })
 
   it('throws for unknown ids', () => {
     expect(() => getCollection('not-real')).toThrow(/not found/)
+    expect(() => getCollection('silence')).toThrow(/not found/)
   })
 })
 

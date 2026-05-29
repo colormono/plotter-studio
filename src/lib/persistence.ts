@@ -2,9 +2,26 @@ import { PlotterDocument } from '../types'
 import { migrateDocument, isModernDocument } from './migrate-document'
 
 export function normalizeDocument(doc: PlotterDocument): PlotterDocument {
+  if (!doc.moduleId || doc.layers.some((l) => l.gridRole && !l.layerRole)) {
+    return migrateDocument(doc as Parameters<typeof migrateDocument>[0])
+  }
+
+  const moduleId = doc.moduleId
   return {
     ...doc,
+    moduleId,
     landscape: doc.landscape ?? false,
+    grid: {
+      ...doc.grid,
+      cellPadding: doc.grid?.cellPadding ?? 0.12,
+      scaleMode: doc.grid?.scaleMode ?? 'proportional',
+    },
+    layers: doc.layers.map((l, i) => ({
+      ...l,
+      order: i,
+      collectionWeight: l.collectionWeight ?? (l.layerRole === 'content' ? 3 : 0),
+      emptySpace: l.emptySpace ?? 0,
+    })),
   }
 }
 

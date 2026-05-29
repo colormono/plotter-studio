@@ -216,6 +216,62 @@ textarea {
   color: inherit;
 }
 
+.btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.zbtn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.mod .mod-icon svg {
+  width: 15px;
+  height: 15px;
+  color: var(--mute);
+}
+
+.mod.is-on .mod-icon svg {
+  color: var(--accent);
+}
+
+.layer .grip svg {
+  width: 13px;
+  height: 13px;
+}
+
+.layer .eye svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sec__a svg {
+  width: 14px;
+  height: 14px;
+}
+
+.seg button svg {
+  width: 12px;
+  height: 12px;
+}
+
+.stepper button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.callout svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  margin-top: 1px;
+}
+
+.docname svg {
+  color: var(--mute);
+}
+
 /* ===== buttons ===== */
 .btn {
   height: 30px;

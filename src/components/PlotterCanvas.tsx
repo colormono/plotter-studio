@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
+import { Maximize, Minus, Plus } from 'lucide-react'
 import { Layer, PlotterDocument } from '../types'
 import { MODULES } from '../lib/modules'
+import { Icon } from './Icon'
 
 interface LayerGroupProps {
   document: PlotterDocument
@@ -124,7 +126,7 @@ export function PlotterCanvas({
             onClick={() => setZoom((z) => Math.max(0.3, +(z - 0.15).toFixed(2)))}
             aria-label="Alejar"
           >
-            −
+            <Icon icon={Minus} size={13} strokeWidth={1.75} />
           </button>
           <span className="zval">{Math.round(scale * 100)}%</span>
           <button
@@ -133,10 +135,10 @@ export function PlotterCanvas({
             onClick={() => setZoom((z) => Math.min(4, +(z + 0.15).toFixed(2)))}
             aria-label="Acercar"
           >
-            +
+            <Icon icon={Plus} size={13} strokeWidth={1.75} />
           </button>
           <button type="button" className="zbtn" onClick={resetView} title="Ajustar" aria-label="Ajustar vista">
-            ⤢
+            <Icon icon={Maximize} size={13} strokeWidth={1.75} />
           </button>
         </div>
         <div className="sp" />

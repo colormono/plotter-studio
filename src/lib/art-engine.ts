@@ -2,12 +2,13 @@ import {
   PlotterDocument,
   GridSpec,
   CollectionWeight,
-  GridLayerRole,
   Rect,
+  CollectionScaleMode,
 } from '../types'
 import { getPaperDimensions } from './paper'
 import { svgEl } from './svg'
 import { makeRng, pick, rnd } from './rng'
+import { isContentLayer } from './module-layers'
 
 export interface CellRect {
   x: number
@@ -22,10 +23,8 @@ export interface ArtStats {
   cellCount: number
 }
 
-export type ArtLayers = Record<GridLayerRole, SVGElement[]>
-
 export interface GeneratedArt {
-  layers: ArtLayers
+  byLayerId: Record<string, SVGElement[]>
   stats: ArtStats
 }
 
@@ -55,6 +54,28 @@ interface Primitive {
 
 function toBounds(r: Rect): Bounds {
   return { x: r.x, y: r.y, w: r.width, h: r.height }
+}
+
+function contentBounds(
+  cell: CellRect,
+  padding: number,
+  scaleMode: CollectionScaleMode,
+): Bounds {
+  const pad = Math.min(cell.width, cell.height) * padding
+  const inner = {
+    x: cell.x + pad,
+    y: cell.y + pad,
+    w: Math.max(0, cell.width - pad * 2),
+    h: Math.max(0, cell.height - pad * 2),
+  }
+  if (scaleMode === 'fit' || inner.w <= 0 || inner.h <= 0) return inner
+  const side = Math.min(inner.w, inner.h)
+  return {
+    x: inner.x + (inner.w - side) / 2,
+    y: inner.y + (inner.h - side) / 2,
+    w: side,
+    h: side,
+  }
 }
 
 function clipLine(
@@ -132,48 +153,44 @@ function hatch(b: Bounds, angleDeg: number, spacing: number): Primitive[] {
 
 const COLLECTION_RENDERERS: Record<
   string,
-  { render: (rng: () => number, b: Bounds) => Primitive[] }
+  { render: (rng: () => number, b: Bounds, scaleMode: CollectionScaleMode) => Primitive[] }
 > = {
   silence: { render: () => [] },
 
   'regular-textures': {
     render: (rng, b) => {
-      const pad = Math.min(b.w, b.h) * 0.12
-      const c = { x: b.x + pad, y: b.y + pad, w: b.w - pad * 2, h: b.h - pad * 2 }
       const style = pick(rng, ['h', 'v', 'd1', 'd2', 'cross', 'rings'] as const)
       const sp = rnd(rng, 1.6, 3.2)
       if (style === 'rings') {
         const out: Primitive[] = []
-        const cx = c.x + c.w / 2
-        const cy = c.y + c.h / 2
-        const rmax = Math.min(c.w, c.h) / 2
+        const cx = b.x + b.w / 2
+        const cy = b.y + b.h / 2
+        const rmax = Math.min(b.w, b.h) / 2
         const step = rnd(rng, 1.6, 2.6)
         for (let r = rmax; r > 0.4; r -= step) out.push({ k: 'circle', cx, cy, r })
         return out
       }
-      if (style === 'cross') return [...hatch(c, 0, sp), ...hatch(c, 90, sp)]
+      if (style === 'cross') return [...hatch(b, 0, sp), ...hatch(b, 90, sp)]
       const ang = { h: 0, v: 90, d1: 45, d2: 135 }[style]
-      return hatch(c, ang, sp)
+      return hatch(b, ang, sp)
     },
   },
 
   'irregular-textures': {
     render: (rng, b) => {
-      const pad = Math.min(b.w, b.h) * 0.12
-      const c = { x: b.x + pad, y: b.y + pad, w: b.w - pad * 2, h: b.h - pad * 2 }
       const out: Primitive[] = []
-      const rows = Math.max(3, Math.floor(c.h / rnd(rng, 2.2, 3.4)))
+      const rows = Math.max(3, Math.floor(b.h / rnd(rng, 2.2, 3.4)))
       const amp = rnd(rng, 0.5, 1.4)
       const freq = rnd(rng, 1.2, 2.8)
       const phase0 = rng() * 6.28
-      const seg = Math.max(6, Math.floor(c.w / 1.6))
+      const seg = Math.max(6, Math.floor(b.w / 1.6))
       for (let r = 0; r <= rows; r++) {
-        const y0 = c.y + (c.h * r) / rows
+        const y0 = b.y + (b.h * r) / rows
         const ph = phase0 + r * 0.6
         let d = ''
         for (let s = 0; s <= seg; s++) {
-          const x = c.x + (c.w * s) / seg
-          const y = y0 + Math.sin((x / c.w) * freq * 6.28 + ph) * amp
+          const x = b.x + (b.w * s) / seg
+          const y = y0 + Math.sin((x / b.w) * freq * 6.28 + ph) * amp
           d += (s === 0 ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2) + ' '
         }
         out.push({ k: 'path', d })
@@ -183,10 +200,10 @@ const COLLECTION_RENDERERS: Record<
   },
 
   'geometric-shapes': {
-    render: (rng, b) => {
+    render: (rng, b, scaleMode) => {
       const cx = b.x + b.w / 2
       const cy = b.y + b.h / 2
-      const R = Math.min(b.w, b.h) * 0.34
+      const R = scaleMode === 'fit' ? Math.min(b.w, b.h) * 0.48 : Math.min(b.w, b.h) * 0.34
       const kind = pick(rng, ['circle', 'tri', 'sq', 'nested', 'circleline'] as const)
       if (kind === 'circle') return [{ k: 'circle', cx, cy, r: R }]
       if (kind === 'circleline') {
@@ -215,8 +232,8 @@ const COLLECTION_RENDERERS: Record<
   },
 
   dice: {
-    render: (rng, b) => {
-      const s = Math.min(b.w, b.h) * 0.62
+    render: (rng, b, scaleMode) => {
+      const s = scaleMode === 'fit' ? Math.min(b.w, b.h) * 0.92 : Math.min(b.w, b.h) * 0.62
       const x = b.x + (b.w - s) / 2
       const y = b.y + (b.h - s) / 2
       const out: Primitive[] = [{ k: 'rect', x, y, w: s, h: s, rx: s * 0.14 }]
@@ -243,13 +260,6 @@ const COLLECTION_RENDERERS: Record<
       return out
     },
   },
-}
-
-function collectionTargetLayer(collectionId: string): GridLayerRole {
-  if (collectionId === 'regular-textures') return 'fill'
-  if (collectionId === 'irregular-textures') return 'organic'
-  if (collectionId === 'geometric-shapes' || collectionId === 'dice') return 'accent'
-  return 'fill'
 }
 
 function weights(rng: () => number, n: number, irregular: boolean): number[] {
@@ -367,14 +377,23 @@ function pushPrimitives(target: SVGElement[], prims: Primitive[], faint = false)
   }
 }
 
-function chooseCollection(rng: () => number, collections: CollectionWeight[]): string {
-  const active = collections.filter((c) => c.on)
-  const wsum = active.reduce((a, c) => a + c.weight, 0) || 1
+function chooseContentLayer(
+  rng: () => number,
+  contentLayers: PlotterDocument['layers'],
+): PlotterDocument['layers'][number] | null {
+  const candidates = contentLayers.filter((l) => l.visible && l.collectionWeight > 0)
+  if (!candidates.length) return null
+  const wsum = candidates.reduce((a, l) => a + l.collectionWeight, 0) || 1
   let r = rng() * wsum
-  for (const c of active) {
-    if ((r -= c.weight) <= 0) return c.id
+  for (const layer of candidates) {
+    if ((r -= layer.collectionWeight) <= 0) return layer
   }
-  return active.length ? active[0]!.id : 'silence'
+  return candidates[0]!
+}
+
+function shouldLeaveEmpty(rng: () => number, emptySpace: number): boolean {
+  if (emptySpace <= 0) return false
+  return rng() * 6 < emptySpace
 }
 
 export const DEFAULT_GRID_SPEC: GridSpec = {
@@ -384,8 +403,11 @@ export const DEFAULT_GRID_SPEC: GridSpec = {
   splitProb: 0.34,
   irregular: false,
   threshold: 2,
+  cellPadding: 0.12,
+  scaleMode: 'proportional',
 }
 
+/** @deprecated Kept for migration. */
 export const DEFAULT_COLLECTION_WEIGHTS: CollectionWeight[] = [
   { id: 'silence', on: true, weight: 5 },
   { id: 'regular-textures', on: true, weight: 4 },
@@ -402,52 +424,50 @@ export function generateArt(document: PlotterDocument): GeneratedArt {
   const stats = { minCell: Infinity }
   const cells = buildGrid(bounds, document.grid, rng, 0, stats)
 
-  const layers: ArtLayers = {
-    cut: [],
-    frame: [],
-    fill: [],
-    organic: [],
-    accent: [],
+  const byLayerId: Record<string, SVGElement[]> = {}
+  for (const layer of document.layers) {
+    byLayerId[layer.id] = []
   }
 
-  const ti = Math.min(m * 0.45, 6)
-  pushPrimitives(layers.cut, [
-    { k: 'rect', x: ti, y: ti, w: paper.width - ti * 2, h: paper.height - ti * 2 },
-  ])
+  const cutBorder = document.layers.find((l) => l.layerRole === 'cut-border')
+  const frame = document.layers.find((l) => l.layerRole === 'frame')
+  const contentLayers = document.layers.filter(isContentLayer)
 
-  pushPrimitives(layers.frame, [
-    { k: 'rect', x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h },
-  ])
-
-  const cross = (cx: number, cy: number) => {
-    pushPrimitives(layers.frame, [
-      { k: 'line', x1: cx - 2.4, y1: cy, x2: cx + 2.4, y2: cy },
-      { k: 'line', x1: cx, y1: cy - 2.4, x2: cx, y2: cy + 2.4 },
+  if (cutBorder) {
+    const ti = Math.min(m * 0.45, 6)
+    pushPrimitives(byLayerId[cutBorder.id]!, [
+      { k: 'rect', x: ti, y: ti, w: paper.width - ti * 2, h: paper.height - ti * 2 },
     ])
   }
-  cross(m / 2, m / 2)
-  cross(paper.width - m / 2, m / 2)
-  cross(m / 2, paper.height - m / 2)
-  cross(paper.width - m / 2, paper.height - m / 2)
+
+  if (frame) {
+    pushPrimitives(byLayerId[frame.id]!, [
+      { k: 'rect', x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h },
+    ])
+  }
 
   for (const cell of cells) {
-    if (document.structure) {
+    if (document.structure && frame) {
       pushPrimitives(
-        layers.frame,
+        byLayerId[frame.id]!,
         [{ k: 'rect', x: cell.x, y: cell.y, w: cell.width, h: cell.height, faint: true }],
         true,
       )
     }
-    const id = chooseCollection(rng, document.collections)
-    const renderer = COLLECTION_RENDERERS[id]
+
+    const layer = chooseContentLayer(rng, contentLayers)
+    if (!layer) continue
+    if (shouldLeaveEmpty(rng, layer.emptySpace)) continue
+    const renderer = COLLECTION_RENDERERS[layer.primaryCollection]
     if (!renderer) continue
-    const prims = renderer.render(rng, toBounds(cell))
-    const role = collectionTargetLayer(id)
-    pushPrimitives(layers[role], prims)
+    const b = contentBounds(cell, document.grid.cellPadding, document.grid.scaleMode)
+    if (b.w <= 0 || b.h <= 0) continue
+    const prims = renderer.render(rng, b, document.grid.scaleMode)
+    pushPrimitives(byLayerId[layer.id]!, prims)
   }
 
   return {
-    layers,
+    byLayerId,
     stats: {
       minCell: stats.minCell === Infinity ? 0 : stats.minCell,
       cellCount: cells.length,

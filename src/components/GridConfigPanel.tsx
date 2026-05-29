@@ -1,5 +1,7 @@
+import { Check, Dices, Grid3x3, Minus, Plus, TriangleAlert } from 'lucide-react'
 import { useDocumentStore } from '../store/document'
 import { GeneratedArt } from '../lib/art-engine'
+import { Icon } from './Icon'
 
 interface GridConfigPanelProps {
   art: GeneratedArt | null
@@ -19,11 +21,11 @@ function Stepper({
   return (
     <div className="stepper">
       <button type="button" onClick={() => onChange(Math.max(min, value - 1))} aria-label="Menos">
-        −
+        <Icon icon={Minus} size={13} strokeWidth={1.75} />
       </button>
       <span className="v">{value}</span>
       <button type="button" onClick={() => onChange(Math.min(max, value + 1))} aria-label="Más">
-        +
+        <Icon icon={Plus} size={13} strokeWidth={1.75} />
       </button>
     </div>
   )
@@ -58,7 +60,7 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
       <div className="sec">
         <div className="ctl-h">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: 'var(--accent)' }}>⊞</span>
+            <Icon icon={Grid3x3} size={16} strokeWidth={1.75} style={{ color: 'var(--accent)' }} />
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500 }}>grid</span>
           </div>
           <button
@@ -68,7 +70,7 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
             onClick={regenerate}
             aria-label="Regenerar"
           >
-            ↻
+            <Icon icon={Dices} size={15} strokeWidth={1.75} />
           </button>
         </div>
         <p className="help">
@@ -145,6 +147,47 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
           <span className="lbl">Mostrar estructura</span>
           <SwitchT on={document.structure} onChange={updateStructure} />
         </div>
+
+        <div className="field">
+          <div className="ctl-h">
+            <span className="lbl">Padding de celda</span>
+            <span className="num">{Math.round(g.cellPadding * 100)}%</span>
+          </div>
+          <input
+            className="rg"
+            type="range"
+            min={0}
+            max={0.35}
+            step={0.01}
+            value={g.cellPadding}
+            onChange={(e) => updateGrid({ cellPadding: +e.target.value })}
+            aria-label="Padding interno de celda"
+          />
+        </div>
+
+        <div className="field">
+          <div className="ctl-h">
+            <span className="lbl">Escala de patrón</span>
+          </div>
+          <div className="row2">
+            <button
+              type="button"
+              className={'btn' + (g.scaleMode === 'proportional' ? ' btn--primary' : '')}
+              style={{ flex: 1, height: 30 }}
+              onClick={() => updateGrid({ scaleMode: 'proportional' })}
+            >
+              Proporcional
+            </button>
+            <button
+              type="button"
+              className={'btn' + (g.scaleMode === 'fit' ? ' btn--primary' : '')}
+              style={{ flex: 1, height: 30 }}
+              onClick={() => updateGrid({ scaleMode: 'fit' })}
+            >
+              Forzado
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="sec">
@@ -169,6 +212,7 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
         {art &&
           (tooSmall ? (
             <div className="callout warn" role="alert">
+              <Icon icon={TriangleAlert} size={15} strokeWidth={1.75} />
               <span>
                 Celda más chica <b>{minMM.toFixed(1)} mm</b> &lt; umbral{' '}
                 <b>{g.threshold} mm</b>. Reduce profundidad o filas.
@@ -176,6 +220,7 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
             </div>
           ) : (
             <div className="callout ok" role="status">
+              <Icon icon={Check} size={15} strokeWidth={1.75} />
               <span>
                 Celda más chica <b>{minMM.toFixed(1)} mm</b> — {art.stats.cellCount} celdas.
               </span>

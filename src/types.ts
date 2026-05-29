@@ -2,8 +2,23 @@ export type PaperFormat = 'A4' | 'A3' | 'Letter' | 'Legal' | 'Square'
 
 export type Technique = 'draw' | 'cut' | 'mixed'
 
-/** Semantic plotter layer roles for the shared grid module (POC model). */
+export type ModuleId = 'grid' | 'tictactoe' | 'test-sheet'
+
+/** Semantic roles shared across modules. */
+export type LayerRole =
+  | 'registration'
+  | 'cut-border'
+  | 'frame'
+  | 'content'
+  | 'cut'
+  | 'board'
+  | 'player-x'
+  | 'player-o'
+
+/** @deprecated Use LayerRole */
 export type GridLayerRole = 'cut' | 'frame' | 'fill' | 'organic' | 'accent'
+
+export type CollectionScaleMode = 'proportional' | 'fit'
 
 export interface GridSpec {
   rows: number
@@ -12,8 +27,12 @@ export interface GridSpec {
   splitProb: number
   irregular: boolean
   threshold: number
+  /** Internal cell padding as fraction of min(cell width, height). */
+  cellPadding: number
+  scaleMode: CollectionScaleMode
 }
 
+/** @deprecated Collections are assigned per layer. Kept for migration. */
 export interface CollectionWeight {
   id: string
   on: boolean
@@ -24,13 +43,15 @@ export interface PlotterDocument {
   id: string
   name: string
   version: string
+  moduleId: ModuleId
   paperFormat: PaperFormat
   landscape: boolean
   margin: number
   seed: number
   structure: boolean
   grid: GridSpec
-  collections: CollectionWeight[]
+  /** @deprecated Kept for migration only. */
+  collections?: CollectionWeight[]
   layers: Layer[]
 }
 
@@ -43,8 +64,13 @@ export interface Layer {
   order: number
   primaryCollection: string
   secondaryCollection: string | null
+  /** Relative weight when picking a layer for each grid cell. */
+  collectionWeight: number
+  /** Probability of leaving assigned cells empty (0–6, like grid weight). */
+  emptySpace: number
   module: string
-  /** Present on fixed grid semantic layers. */
+  layerRole?: LayerRole
+  /** @deprecated Use layerRole */
   gridRole?: GridLayerRole
   moduleConfig: Record<string, unknown>
 }
@@ -81,6 +107,7 @@ export interface Rect {
 export interface Collection {
   id: string
   label: string
+  kind: 'draw' | 'cut'
   render: (value: number, bounds: Rect) => SVGElement[]
 }
 

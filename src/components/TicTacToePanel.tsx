@@ -1,6 +1,8 @@
+import { Dices } from 'lucide-react'
 import { useDocumentStore } from '../store/document'
-import { TicTacToeConfig } from '../lib/modules/tictactoe'
 import { gameResult } from '../lib/tictactoe'
+import { getTicTacToeConfig } from '../lib/module-layers'
+import { Icon } from './Icon'
 
 const RESULT_LABELS: Record<string, string> = {
   X: 'Gana X',
@@ -11,23 +13,14 @@ const RESULT_LABELS: Record<string, string> = {
 
 export function TicTacToePanel() {
   const document = useDocumentStore((s) => s.document)
-  const activeLayerId = useDocumentStore((s) => s.activeLayerId)
   const regenerateTicTacToe = useDocumentStore((s) => s.regenerateTicTacToe)
 
-  if (!document || !activeLayerId) return null
-  const activeLayer = document.layers.find((l) => l.id === activeLayerId)
-  if (!activeLayer || activeLayer.module !== 'tictactoe') {
-    return (
-      <div className="sec">
-        <div className="sec__h">
-          <span className="sec__t">tictactoe</span>
-        </div>
-        <p className="help">Selecciona una capa tictactoe o añade el módulo desde el panel de capas.</p>
-      </div>
-    )
-  }
+  if (!document || document.moduleId !== 'tictactoe') return null
 
-  const config = activeLayer.moduleConfig as unknown as TicTacToeConfig
+  const boardLayer = document.layers.find((l) => l.layerRole === 'board')
+  const config = boardLayer ? getTicTacToeConfig(boardLayer) : null
+  if (!config) return null
+
   const result = gameResult(config.board)
   const resultKey = result.replace('-', '')
 
@@ -35,9 +28,6 @@ export function TicTacToePanel() {
     <div className="sec">
       <div className="sec__h">
         <span className="sec__t">tictactoe</span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--mute)' }}>
-          {activeLayer.name}
-        </span>
       </div>
 
       <div className="ctl-h">
@@ -46,11 +36,7 @@ export function TicTacToePanel() {
           className="num"
           style={{
             color:
-              resultKey === 'X'
-                ? '#2563eb'
-                : resultKey === 'O'
-                  ? '#ea580c'
-                  : 'var(--ink)',
+              resultKey === 'X' ? '#2563eb' : resultKey === 'O' ? '#ea580c' : 'var(--ink)',
           }}
         >
           {RESULT_LABELS[result]}
@@ -69,8 +55,9 @@ export function TicTacToePanel() {
         type="button"
         className="btn btn--primary"
         style={{ alignSelf: 'flex-start' }}
-        onClick={() => regenerateTicTacToe(activeLayerId)}
+        onClick={() => boardLayer && regenerateTicTacToe(boardLayer.id)}
       >
+        <Icon icon={Dices} size={14} strokeWidth={1.75} />
         Regenerar
       </button>
     </div>

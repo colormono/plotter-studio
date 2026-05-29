@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { buildExportSvg } from './export'
 import { gridModule } from './modules/grid'
-import { createDefaultGridLayers } from './grid-layers'
-import { DEFAULT_GRID_SPEC, DEFAULT_COLLECTION_WEIGHTS } from './art-engine'
+import { createGridModuleLayers } from './module-layers'
+import { DEFAULT_GRID_SPEC } from './art-engine'
 import type { PlotterDocument } from '../types'
 import { SVG_NS } from './svg'
 
@@ -10,19 +10,19 @@ const doc: PlotterDocument = {
   id: 'doc-export',
   name: 'export-test',
   version: '1',
+  moduleId: 'grid',
   paperFormat: 'A4',
   landscape: false,
   margin: 14,
   seed: 42,
   structure: true,
   grid: { ...DEFAULT_GRID_SPEC },
-  collections: DEFAULT_COLLECTION_WEIGHTS.map((c) => ({ ...c })),
-  layers: createDefaultGridLayers(),
+  layers: createGridModuleLayers(),
 }
 
 describe('buildExportSvg', () => {
   it('does not remove elements already mounted in the canvas', () => {
-    const layer = doc.layers.find((l) => l.gridRole === 'frame')!
+    const layer = doc.layers.find((l) => l.layerRole === 'frame')!
     const host = document.createElementNS(SVG_NS, 'g') as SVGGElement
     const svg = document.createElementNS(SVG_NS, 'svg') as SVGSVGElement
     svg.appendChild(host)

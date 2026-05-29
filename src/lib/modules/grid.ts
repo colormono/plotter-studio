@@ -1,5 +1,6 @@
 import { PlotterDocument, Layer } from '../../types'
 import { generateArt } from '../art-engine'
+import { renderRegistrationMarks } from '../registration-marks'
 import { Module } from '../../types'
 
 let cachedKey = ''
@@ -13,7 +14,14 @@ function documentCacheKey(document: PlotterDocument): string {
     seed: document.seed,
     structure: document.structure,
     grid: document.grid,
-    collections: document.collections,
+    layers: document.layers.map((l) => ({
+      id: l.id,
+      layerRole: l.layerRole,
+      primaryCollection: l.primaryCollection,
+      collectionWeight: l.collectionWeight,
+      emptySpace: l.emptySpace,
+      visible: l.visible,
+    })),
   })
 }
 
@@ -30,9 +38,16 @@ export const gridModule: Module = {
   id: 'grid',
 
   render(document: PlotterDocument, layer: Layer): SVGElement[] {
-    if (!layer.gridRole) return []
+    if (layer.layerRole === 'registration') {
+      return renderRegistrationMarks(document).map((el) => el.cloneNode(true) as SVGElement)
+    }
+    if (!layer.layerRole || layer.layerRole === 'content') {
+      const art = getArt(document)
+      const elements = art.byLayerId[layer.id] ?? []
+      return elements.map((el) => el.cloneNode(true) as SVGElement)
+    }
     const art = getArt(document)
-    const elements = art.layers[layer.gridRole] ?? []
+    const elements = art.byLayerId[layer.id] ?? []
     return elements.map((el) => el.cloneNode(true) as SVGElement)
   },
 }

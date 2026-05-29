@@ -5,14 +5,21 @@ import {
   Layer,
   Technique,
   GridSpec,
-  CollectionWeight,
+  ModuleId,
 } from '../types'
-import { generateGame } from '../lib/tictactoe'
-import type { TicTacToeConfig } from '../lib/modules/tictactoe'
 import { saveAutosave } from '../lib/persistence'
-import { createDefaultGridLayers, isGridSemanticLayer } from '../lib/grid-layers'
-import { DEFAULT_GRID_SPEC, DEFAULT_COLLECTION_WEIGHTS } from '../lib/art-engine'
+import {
+  createGridContentLayer,
+  createLayersForModule,
+  defaultActiveLayerId,
+  getTicTacToeConfig,
+  isContentLayer,
+  isFixedLayer,
+} from '../lib/module-layers'
+import { DEFAULT_GRID_SPEC } from '../lib/art-engine'
+import { generateGame } from '../lib/tictactoe'
 import { nextSeed } from '../lib/rng'
+import { collectionsForTechnique } from '../lib/collection-kinds'
 
 interface DocumentState {
   document: PlotterDocument | null
@@ -21,17 +28,16 @@ interface DocumentState {
   loadDocument: (doc: PlotterDocument) => void
   clearDocument: () => void
   updateDocumentName: (name: string) => void
+  setModule: (moduleId: ModuleId) => void
   updateLayer: (id: string, patch: Partial<Omit<Layer, 'id'>>) => void
   updateGrid: (patch: Partial<GridSpec>) => void
   updatePaperFormat: (paperFormat: PaperFormat) => void
   updateLandscape: (landscape: boolean) => void
   updateMargin: (margin: number) => void
   updateStructure: (structure: boolean) => void
-  updateCollection: (id: string, patch: Partial<Omit<CollectionWeight, 'id'>>) => void
   regenerate: () => void
-  addTicTacToeModule: () => void
+  addGridLayer: (name: string, penColor: string, technique: Technique) => void
   regenerateTicTacToe: (layerId: string) => void
-  addTestSheetModule: () => void
   removeLayer: (id: string) => void
   reorderLayers: (orderedIds: string[]) => void
   setActiveLayer: (id: string | null) => void
@@ -41,27 +47,32 @@ function makeId(): string {
   return crypto.randomUUID()
 }
 
+function defaultCollectionForTechnique(technique: Technique): string {
+  const options = collectionsForTechnique(technique)
+  return options[0] ?? 'regular-textures'
+}
+
 export const useDocumentStore = create<DocumentState>((set, get) => ({
   document: null,
   activeLayerId: null,
 
   createDocument: (name, paperFormat) => {
-    const gridLayers = createDefaultGridLayers()
+    const layers = createLayersForModule('grid')
     set({
       document: {
         id: makeId(),
         name,
         version: '1',
+        moduleId: 'grid',
         paperFormat,
         landscape: paperFormat === 'Square' ? false : true,
         margin: 14,
         seed: 42,
         structure: true,
         grid: { ...DEFAULT_GRID_SPEC },
-        collections: DEFAULT_COLLECTION_WEIGHTS.map((c) => ({ ...c })),
-        layers: gridLayers,
+        layers,
       },
-      activeLayerId: gridLayers.find((l) => l.gridRole === 'accent')?.id ?? gridLayers[0]?.id ?? null,
+      activeLayerId: defaultActiveLayerId(layers),
     })
   },
 
@@ -78,7 +89,17 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   loadDocument: (doc) =>
     set({
       document: doc,
-      activeLayerId: doc.layers.find((l) => l.gridRole === 'accent')?.id ?? doc.layers[0]?.id ?? null,
+      activeLayerId: defaultActiveLayerId(doc.layers),
+    }),
+
+  setModule: (moduleId) =>
+    set((state) => {
+      if (!state.document || state.document.moduleId === moduleId) return state
+      const layers = createLayersForModule(moduleId)
+      return {
+        document: { ...state.document, moduleId, layers },
+        activeLayerId: defaultActiveLayerId(layers),
+      }
     }),
 
   updateLayer: (id, patch) =>
@@ -134,19 +155,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       return { document: { ...state.document, structure } }
     }),
 
-  updateCollection: (id, patch) =>
-    set((state) => {
-      if (!state.document) return state
-      return {
-        document: {
-          ...state.document,
-          collections: state.document.collections.map((c) =>
-            c.id === id ? { ...c, ...patch } : c,
-          ),
-        },
-      }
-    }),
-
   regenerate: () =>
     set((state) => {
       if (!state.document) return state
@@ -158,35 +166,22 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
     }),
 
-  addTicTacToeModule: () =>
+  addGridLayer: (name, penColor, technique) =>
     set((state) => {
-      if (!state.document) return state
-      const groupId = makeId()
-      const board = generateGame()
+      if (!state.document || state.document.moduleId !== 'grid') return state
+      const trimmed = name.trim()
+      if (!trimmed) return state
       const order = state.document.layers.length
-
-      const makeLayer = (role: TicTacToeConfig['role'], name: string, offset: number): Layer => ({
-        id: makeId(),
-        name,
-        penColor: '#000000',
-        technique: 'draw' as Technique,
-        visible: true,
-        order: order + offset,
-        primaryCollection: 'silence',
-        secondaryCollection: null,
-        module: 'tictactoe',
-        moduleConfig: { role, board, groupId } as unknown as Record<string, unknown>,
-      })
-
-      const boardLayer = makeLayer('board', 'Tablero', 0)
-      const marksLayer = makeLayer('marks', 'Marcas', 1)
-
+      const layer = createGridContentLayer(
+        trimmed,
+        penColor,
+        technique,
+        order,
+        defaultCollectionForTechnique(technique),
+      )
       return {
-        document: {
-          ...state.document,
-          layers: [...state.document.layers, boardLayer, marksLayer],
-        },
-        activeLayerId: marksLayer.id,
+        document: { ...state.document, layers: [...state.document.layers, layer] },
+        activeLayerId: layer.id,
       }
     }),
 
@@ -195,39 +190,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       if (!state.document) return state
       const layer = state.document.layers.find((l) => l.id === layerId)
       if (!layer || layer.module !== 'tictactoe') return state
-      const { groupId } = layer.moduleConfig as unknown as TicTacToeConfig
+      const cfg = getTicTacToeConfig(layer)
+      if (!cfg) return state
       const board = generateGame()
       return {
         document: {
           ...state.document,
           layers: state.document.layers.map((l) => {
             if (l.module !== 'tictactoe') return l
-            const cfg = l.moduleConfig as unknown as TicTacToeConfig
-            if (cfg.groupId !== groupId) return l
-            return { ...l, moduleConfig: { ...cfg, board } as unknown as Record<string, unknown> }
+            const c = getTicTacToeConfig(l)
+            if (!c || c.groupId !== cfg.groupId) return l
+            return { ...l, moduleConfig: { ...c, board } as unknown as Record<string, unknown> }
           }),
         },
-      }
-    }),
-
-  addTestSheetModule: () =>
-    set((state) => {
-      if (!state.document) return state
-      const layer: Layer = {
-        id: makeId(),
-        name: 'test-sheet',
-        penColor: '#000000',
-        technique: 'draw' as Technique,
-        visible: true,
-        order: state.document.layers.length,
-        primaryCollection: 'silence',
-        secondaryCollection: null,
-        module: 'test-sheet',
-        moduleConfig: {},
-      }
-      return {
-        document: { ...state.document, layers: [...state.document.layers, layer] },
-        activeLayerId: layer.id,
       }
     }),
 
@@ -235,12 +210,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set((state) => {
       if (!state.document) return state
       const target = state.document.layers.find((l) => l.id === id)
-      if (target && isGridSemanticLayer(target)) return state
+      if (!target || isFixedLayer(target)) return state
+      if (!isContentLayer(target)) return state
       const remaining = state.document.layers
         .filter((l) => l.id !== id)
         .map((l, i) => ({ ...l, order: i }))
       const activeLayerId =
-        state.activeLayerId === id ? (remaining[0]?.id ?? null) : state.activeLayerId
+        state.activeLayerId === id ? defaultActiveLayerId(remaining) : state.activeLayerId
       return {
         document: { ...state.document, layers: remaining },
         activeLayerId,

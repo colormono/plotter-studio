@@ -1,6 +1,9 @@
+import type { LucideIcon } from 'lucide-react'
+import { RectangleHorizontal, RectangleVertical } from 'lucide-react'
 import { useDocumentStore } from '../store/document'
 import { PaperFormat } from '../types'
 import { PAPER_FORMAT_OPTIONS, formatPaperLabel, isSquareFormat } from '../lib/paper'
+import { Icon } from './Icon'
 
 function Seg<T extends string>({
   value,
@@ -9,7 +12,7 @@ function Seg<T extends string>({
   disabled,
 }: {
   value: T
-  options: { value: T; label: string }[]
+  options: { value: T; label?: string; icon?: LucideIcon }[]
   onChange: (v: T) => void
   disabled?: boolean
 }) {
@@ -22,8 +25,9 @@ function Seg<T extends string>({
           className={value === o.value ? 'is-on' : ''}
           onClick={() => onChange(o.value)}
           disabled={disabled}
+          aria-label={o.label ?? o.value}
         >
-          {o.label}
+          {o.icon ? <Icon icon={o.icon} size={12} strokeWidth={1.75} /> : o.label}
         </button>
       ))}
     </div>
@@ -61,8 +65,8 @@ export function PaperPanel() {
           <Seg
             value={document.landscape ? 'l' : 'p'}
             options={[
-              { value: 'p', label: '▯' },
-              { value: 'l', label: '▭' },
+              { value: 'p', icon: RectangleVertical, label: 'Vertical' },
+              { value: 'l', icon: RectangleHorizontal, label: 'Apaisado' },
             ]}
             onChange={(v) => updateLandscape(v === 'l')}
             disabled={square}

@@ -1,23 +1,34 @@
 import { useMemo, useCallback, useRef, useState, useEffect } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
+import {
+  AlertTriangle,
+  Dices,
+  Download,
+  File,
+  ShieldCheck,
+  X,
+} from 'lucide-react'
 import { useDocumentStore } from '../store/document'
 import { PlotterCanvas } from './PlotterCanvas'
 import { LayerPanel } from './LayerPanel'
-import { ModulePanel, ModuleId } from './ModulePanel'
+import { ModulePanel } from './ModulePanel'
 import { CollectionsPanel } from './CollectionsPanel'
 import { PaperPanel } from './PaperPanel'
 import { GridConfigPanel } from './GridConfigPanel'
 import { TicTacToePanel } from './TicTacToePanel'
+import { Icon } from './Icon'
 import { generateArt } from '../lib/art-engine'
 import { formatPaperLabel, getPaperDimensions } from '../lib/paper'
 import { buildExportSvg, downloadSvg } from '../lib/export'
 import { downloadDocument, openDocumentFromFile } from '../lib/persistence'
 
-function countStrokes(art: ReturnType<typeof generateArt>, visibleLayerIds: Set<string>, document: NonNullable<ReturnType<typeof useDocumentStore.getState>['document']>) {
+function countStrokes(
+  art: ReturnType<typeof generateArt>,
+  visibleLayerIds: Set<string>,
+) {
   let count = 0
-  for (const layer of document.layers) {
-    if (!visibleLayerIds.has(layer.id) || layer.module !== 'grid' || !layer.gridRole) continue
-    count += art.layers[layer.gridRole]?.length ?? 0
+  for (const [layerId, elements] of Object.entries(art.byLayerId)) {
+    if (visibleLayerIds.has(layerId)) count += elements.length
   }
   return count
 }
@@ -68,11 +79,7 @@ function DocNameEditor({ name, onCommit }: { name: string; onCommit: (name: stri
   }
 
   return (
-    <span
-      className="nm"
-      onDoubleClick={startEditing}
-      title="Doble clic para renombrar"
-    >
+    <span className="nm" onDoubleClick={startEditing} title="Doble clic para renombrar">
       {name}
     </span>
   )
@@ -84,13 +91,14 @@ export function AppShell() {
   const loadDocument = useDocumentStore((s) => s.loadDocument)
   const updateDocumentName = useDocumentStore((s) => s.updateDocumentName)
   const regenerate = useDocumentStore((s) => s.regenerate)
-  const addTicTacToeModule = useDocumentStore((s) => s.addTicTacToeModule)
-  const addTestSheetModule = useDocumentStore((s) => s.addTestSheetModule)
+  const setModule = useDocumentStore((s) => s.setModule)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [openError, setOpenError] = useState<string | null>(null)
-  const [activeModule, setActiveModule] = useState<ModuleId>('grid')
 
-  const art = useMemo(() => (document ? generateArt(document) : null), [document])
+  const art = useMemo(
+    () => (document?.moduleId === 'grid' ? generateArt(document) : null),
+    [document],
+  )
 
   const exportStats = useMemo(() => {
     if (!document || !art) return null
@@ -98,7 +106,7 @@ export function AppShell() {
     return {
       size: formatPaperLabel(document),
       layers: document.layers.filter((l) => l.visible).length,
-      prims: countStrokes(art, visibleIds, document),
+      prims: countStrokes(art, visibleIds),
       cells: art.stats.cellCount,
     }
   }, [document, art])
@@ -147,10 +155,26 @@ export function AppShell() {
     [loadDocument],
   )
 
+  const handleModuleChange = useCallback(
+    (moduleId: typeof document extends null ? never : NonNullable<typeof document>['moduleId']) => {
+      if (!document || document.moduleId === moduleId) return
+      if (
+        !confirm(
+          `Cambiar a módulo "${moduleId}" reemplazará las capas actuales. ¿Continuar?`,
+        )
+      ) {
+        return
+      }
+      setModule(moduleId)
+    },
+    [document, setModule],
+  )
+
   if (!document) return null
 
   const visibleLayers = document.layers.filter((l) => l.visible)
   const paper = getPaperDimensions(document)
+  const activeModule = document.moduleId
 
   return (
     <div className={'shell' + (openError ? ' shell--error' : '')}>
@@ -161,12 +185,16 @@ export function AppShell() {
         </div>
         <div style={{ width: 1, height: 22, background: 'var(--hairline)' }} aria-hidden />
         <div className="docname">
+          <Icon icon={File} size={14} strokeWidth={1.75} />
           <DocNameEditor name={document.name} onCommit={updateDocumentName} />
           <span className="ext">.plotter.json</span>
         </div>
         <div className="tb-sp" />
         {art && (
           <div className="tb-meta">
+            <span>
+              <b>{document.layers.length}</b> capas
+            </span>
             <span>
               <b>{art.stats.cellCount}</b> celdas
             </span>
@@ -178,10 +206,12 @@ export function AppShell() {
           </div>
         )}
         <button type="button" className="btn" onClick={regenerate}>
-          ↻ Regenerar
+          <Icon icon={Dices} size={14} strokeWidth={1.75} />
+          Regenerar
         </button>
         <button type="button" className="btn btn--primary" onClick={handleExport}>
-          ↓ Exportar
+          <Icon icon={Download} size={14} strokeWidth={1.75} />
+          Exportar
         </button>
         <button type="button" className="btn btn--ghost" onClick={handleSave}>
           Guardar
@@ -204,27 +234,18 @@ export function AppShell() {
 
       {openError && (
         <div className="banner banner--error" role="alert">
-          <span>⚠</span>
+          <Icon icon={AlertTriangle} size={15} strokeWidth={1.75} />
           <span>{openError}</span>
           <button type="button" onClick={() => setOpenError(null)} aria-label="Cerrar">
-            ✕
+            <Icon icon={X} size={14} strokeWidth={1.75} />
           </button>
         </div>
       )}
 
       <aside className="rail rail--l" aria-label="Módulos y capas">
         <PaperPanel />
-        <ModulePanel activeModule={activeModule} onModule={setActiveModule} />
-        <LayerPanel
-          onAddTictactoe={() => {
-            addTicTacToeModule()
-            setActiveModule('tictactoe')
-          }}
-          onAddTestSheet={() => {
-            addTestSheetModule()
-            setActiveModule('test-sheet')
-          }}
-        />
+        <ModulePanel activeModule={activeModule} onModule={handleModuleChange} />
+        <LayerPanel />
       </aside>
 
       <main className="stage">
@@ -263,12 +284,24 @@ export function AppShell() {
                   <span className="k">celdas</span>
                   <span className="v">{exportStats.cells}</span>
                 </div>
+                <div
+                  className="callout"
+                  style={{
+                    background: 'var(--surface-tint)',
+                    border: '1px solid var(--hairline)',
+                    color: 'var(--mute)',
+                  }}
+                >
+                  <Icon icon={ShieldCheck} size={15} strokeWidth={1.75} />
+                  <span>Al exportar se sanitiza el SVG: se eliminan rellenos, filtros y degradados.</span>
+                </div>
                 <button
                   type="button"
                   className="btn btn--primary"
                   style={{ width: '100%', height: 34, marginTop: 8 }}
                   onClick={handleExport}
                 >
+                  <Icon icon={Download} size={15} strokeWidth={1.75} />
                   Exportar SVG
                 </button>
               </div>
@@ -281,7 +314,9 @@ export function AppShell() {
             <div className="sec__h">
               <span className="sec__t">test-sheet</span>
             </div>
-            <p className="help">Añade una capa test-sheet desde el panel de capas (⊕).</p>
+            <p className="help">
+              Hoja de prueba con capas de dibujo y corte. Usa las marcas de esquina para registro.
+            </p>
           </div>
         )}
       </aside>

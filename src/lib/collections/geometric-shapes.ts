@@ -77,6 +77,7 @@ const SHAPES: ((bounds: Rect) => SVGElement[])[] = [
 export const geometricShapesCollection: Collection = {
   id: 'geometric-shapes',
   label: 'Geometric shapes',
+  kind: 'cut',
   render: (value, bounds) => {
     if (value === 0) return []
     const idx = (value - 1) % SHAPES.length

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -13,18 +14,22 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from '@dnd-kit/sortable'
+import { CirclePlus } from 'lucide-react'
 import { useDocumentStore } from '../store/document'
 import { LayerItem } from './LayerItem'
+import { Icon } from './Icon'
+import { Technique } from '../types'
 
-interface LayerPanelProps {
-  onAddTictactoe: () => void
-  onAddTestSheet: () => void
-}
-
-export function LayerPanel({ onAddTictactoe, onAddTestSheet }: LayerPanelProps) {
+export function LayerPanel() {
   const document = useDocumentStore((s) => s.document)
   const activeLayerId = useDocumentStore((s) => s.activeLayerId)
   const reorderLayers = useDocumentStore((s) => s.reorderLayers)
+  const addGridLayer = useDocumentStore((s) => s.addGridLayer)
+
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState('#0A0A0A')
+  const [newTechnique, setNewTechnique] = useState<Technique>('draw')
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -35,6 +40,7 @@ export function LayerPanel({ onAddTictactoe, onAddTestSheet }: LayerPanelProps) 
 
   const layers = [...document.layers].sort((a, b) => a.order - b.order)
   const ids = layers.map((l) => l.id)
+  const isGrid = document.moduleId === 'grid'
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -44,31 +50,69 @@ export function LayerPanel({ onAddTictactoe, onAddTestSheet }: LayerPanelProps) 
     reorderLayers(arrayMove(ids, oldIndex, newIndex))
   }
 
+  function handleAddLayer() {
+    const trimmed = newName.trim()
+    if (!trimmed) return
+    addGridLayer(trimmed, newColor, newTechnique)
+    setNewName('')
+    setAdding(false)
+  }
+
   return (
     <div className="sec sec--grow">
       <div className="sec__h">
         <span className="sec__t">Capas</span>
-        <span style={{ display: 'flex', gap: 4 }}>
+        {isGrid && (
           <button
             type="button"
             className="sec__a"
-            onClick={onAddTictactoe}
-            title="Añadir tictactoe"
-            aria-label="Añadir tictactoe"
+            onClick={() => setAdding((v) => !v)}
+            title="Añadir capa"
+            aria-label="Añadir capa"
+            aria-expanded={adding}
           >
-            ✕○
+            <Icon icon={CirclePlus} size={14} strokeWidth={1.75} />
           </button>
-          <button
-            type="button"
-            className="sec__a"
-            onClick={onAddTestSheet}
-            title="Añadir test sheet"
-            aria-label="Añadir test sheet"
-          >
-            ⊕
-          </button>
-        </span>
+        )}
       </div>
+
+      {adding && isGrid && (
+        <div className="add-layer" style={{ padding: '0 12px 10px', display: 'grid', gap: 8 }}>
+          <input
+            className="new-input"
+            style={{ height: 30, fontSize: 12 }}
+            placeholder="Nombre de capa"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            autoFocus
+          />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label className="pen-wrap" title="Color">
+              <span className="pen" style={{ background: newColor, width: 18, height: 18 }} />
+              <input
+                type="color"
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                className="pen-input"
+                aria-label="Color de pluma"
+              />
+            </label>
+            <select
+              className="new-input"
+              style={{ flex: 1, height: 30, fontSize: 12 }}
+              value={newTechnique}
+              onChange={(e) => setNewTechnique(e.target.value as Technique)}
+              aria-label="Tipo de capa"
+            >
+              <option value="draw">Dibujo</option>
+              <option value="cut">Corte</option>
+            </select>
+          </div>
+          <button type="button" className="btn btn--primary" style={{ height: 30 }} onClick={handleAddLayer}>
+            Añadir
+          </button>
+        </div>
+      )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>

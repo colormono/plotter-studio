@@ -1,9 +1,9 @@
 import { PlotterDocument, Layer, Module } from '../../types'
 import { getPaperDimensions } from '../paper'
+import { renderRegistrationMarks } from '../registration-marks'
 import { svgEl } from '../svg'
 
 const MARGIN = 10
-const CORNER_SIZE = 5
 const GRID_COLS = 10
 const GRID_ROWS = 10
 const CROSS_HALF = 3
@@ -11,17 +11,6 @@ const SW = '0.4'
 
 function renderBorder(x: number, y: number, w: number, h: number): SVGElement {
   return svgEl('rect', { x, y, width: w, height: h, 'stroke-width': SW })
-}
-
-function renderCornerMarks(x: number, y: number, w: number, h: number): SVGElement[] {
-  const s = CORNER_SIZE
-  const paths = [
-    `M ${x} ${y + s} L ${x} ${y} L ${x + s} ${y}`,
-    `M ${x + w - s} ${y} L ${x + w} ${y} L ${x + w} ${y + s}`,
-    `M ${x} ${y + h - s} L ${x} ${y + h} L ${x + s} ${y + h}`,
-    `M ${x + w - s} ${y + h} L ${x + w} ${y + h} L ${x + w} ${y + h - s}`,
-  ]
-  return paths.map((d) => svgEl('path', { d, 'stroke-width': SW }))
 }
 
 function renderGrid(x: number, y: number, w: number, h: number): SVGElement[] {
@@ -70,10 +59,34 @@ function renderLabel(doc: PlotterDocument, x: number, y: number, w: number): SVG
   return el
 }
 
+function renderCutBorder(doc: PlotterDocument): SVGElement[] {
+  const { width, height } = getPaperDimensions(doc)
+  const ti = Math.min(doc.margin * 0.45, 6)
+  return [
+    svgEl('rect', {
+      x: ti,
+      y: ti,
+      width: width - ti * 2,
+      height: height - ti * 2,
+      'stroke-width': SW,
+    }),
+  ]
+}
+
 export const testSheetModule: Module = {
   id: 'test-sheet',
 
-  render(doc: PlotterDocument, _layer: Layer): SVGElement[] {
+  render(doc: PlotterDocument, layer: Layer): SVGElement[] {
+    if (layer.layerRole === 'registration') {
+      return renderRegistrationMarks(doc)
+    }
+
+    if (layer.layerRole === 'cut') {
+      return renderCutBorder(doc)
+    }
+
+    if (layer.layerRole !== 'content') return []
+
     const { width, height } = getPaperDimensions(doc)
     const x = MARGIN
     const y = MARGIN
@@ -82,7 +95,6 @@ export const testSheetModule: Module = {
 
     return [
       renderBorder(x, y, w, h),
-      ...renderCornerMarks(x, y, w, h),
       ...renderGrid(x, y, w, h),
       ...renderRegistrationCrosses(x, y, w, h),
       renderLabel(doc, x, y, w),

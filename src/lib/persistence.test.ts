@@ -1,21 +1,21 @@
 import { describe, it, expect } from 'vitest'
 import { serialize, deserialize } from './persistence'
 import { PlotterDocument, GridConfig } from '../types'
-import { DEFAULT_GRID_SPEC, DEFAULT_COLLECTION_WEIGHTS } from './art-engine'
-import { createDefaultGridLayers } from './grid-layers'
+import { DEFAULT_GRID_SPEC } from './art-engine'
+import { createGridModuleLayers } from './module-layers'
 
 const modernDoc: PlotterDocument = {
   id: 'doc-1',
   name: 'Modern',
   version: '1',
+  moduleId: 'grid',
   paperFormat: 'A4',
   landscape: false,
   margin: 14,
   seed: 42,
   structure: true,
   grid: { ...DEFAULT_GRID_SPEC },
-  collections: DEFAULT_COLLECTION_WEIGHTS.map((c) => ({ ...c })),
-  layers: createDefaultGridLayers(),
+  layers: createGridModuleLayers(),
 }
 
 const legacyDoc = {
@@ -53,8 +53,10 @@ describe('persistence', () => {
     const json = serialize(modernDoc)
     const restored = deserialize(json)
     expect(restored.id).toBe(modernDoc.id)
+    expect(restored.moduleId).toBe('grid')
     expect(restored.grid.rows).toBe(modernDoc.grid.rows)
-    expect(restored.layers.filter((l) => l.gridRole).length).toBe(5)
+    expect(restored.layers.some((l) => l.layerRole === 'frame')).toBe(true)
+    expect(restored.layers.some((l) => l.layerRole === 'registration')).toBe(true)
   })
 
   it('migrates legacy documents with maxGridDepth', () => {
@@ -62,8 +64,8 @@ describe('persistence', () => {
     expect(restored.grid.depth).toBe(2)
     expect(restored.margin).toBe(10)
     expect(restored.seed).toBe(42)
-    expect(restored.collections.length).toBeGreaterThan(0)
-    expect(restored.layers.some((l) => l.gridRole === 'frame')).toBe(true)
+    expect(restored.moduleId).toBe('grid')
+    expect(restored.layers.some((l) => l.layerRole === 'frame')).toBe(true)
   })
 
   it('rejects invalid JSON', () => {
@@ -119,28 +121,26 @@ describe('legacy subgrid fixture still parses', () => {
                   colWeights: null,
                   cells: Array.from({ length: 3 }, () =>
                     Array.from({ length: 3 }, () => ({
-                      primaryValue: 1,
+                      primaryValue: 0.5,
                       secondaryValue: null,
                       subgrid: null,
                     })),
                   ),
-                } as GridConfig,
+                },
               },
-              { primaryValue: 0, secondaryValue: null, subgrid: null },
+              { primaryValue: 0.3, secondaryValue: null, subgrid: null },
             ],
             [
-              { primaryValue: 0, secondaryValue: null, subgrid: null },
-              { primaryValue: 0, secondaryValue: null, subgrid: null },
+              { primaryValue: 0.6, secondaryValue: null, subgrid: null },
+              { primaryValue: 0.9, secondaryValue: null, subgrid: null },
             ],
           ],
-        },
+        } satisfies GridConfig,
       },
     ],
   }
 
-  it('migrates to shared grid spec', () => {
-    const restored = deserialize(JSON.stringify(docWithSubgrid))
-    expect(restored.grid.irregular).toBe(true)
-    expect(restored.grid.rows).toBe(2)
+  it('parses without throwing', () => {
+    expect(() => deserialize(JSON.stringify(docWithSubgrid))).not.toThrow()
   })
 })

@@ -62,6 +62,7 @@ function renderFace(value: number, bounds: Rect): SVGElement[] {
 export const diceCollection: Collection = {
   id: 'dice',
   label: 'Dice',
+  kind: 'cut',
   render: (value, bounds) => {
     if (value === 0) return []
     const face = ((value - 1) % 6) + 1

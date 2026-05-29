@@ -108,6 +108,7 @@ const TEXTURES: ((bounds: Rect) => SVGElement[])[] = [
 export const regularTexturesCollection: Collection = {
   id: 'regular-textures',
   label: 'Regular textures',
+  kind: 'draw',
   render: (value, bounds) => {
     if (value === 0) return []
     const idx = ((value - 1) % TEXTURES.length)

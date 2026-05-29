@@ -1,5 +1,4 @@
 import { Collection } from '../../types'
-import { silenceCollection } from './silence'
 import { regularTexturesCollection } from './regular-textures'
 import { geometricShapesCollection } from './geometric-shapes'
 import { diceCollection } from './dice'
@@ -16,7 +15,6 @@ export { irregularTexturesCollection } from './irregular-textures'
  * To add a new collection: import it and append to this array — no other changes needed.
  */
 export const COLLECTIONS: Collection[] = [
-  silenceCollection,
   regularTexturesCollection,
   geometricShapesCollection,
   diceCollection,

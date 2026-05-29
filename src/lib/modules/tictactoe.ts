@@ -3,9 +3,10 @@ import { getPaperDimensions } from '../paper'
 import { Board } from '../tictactoe'
 import { svgEl } from '../svg'
 import { Module } from '../../types'
+import { renderRegistrationMarks } from '../registration-marks'
+import { getTicTacToeConfig } from '../module-layers'
 
 export interface TicTacToeConfig {
-  role: 'board' | 'marks'
   board: Board
   groupId: string
 }
@@ -24,22 +25,22 @@ function boardLayout(doc: PlotterDocument) {
 function renderBoard(doc: PlotterDocument): SVGElement[] {
   const { x, y, size, cell } = boardLayout(doc)
   return [
-    svgEl('line', { x1: x + cell,     y1: y,        x2: x + cell,     y2: y + size, 'stroke-width': SW }),
-    svgEl('line', { x1: x + cell * 2, y1: y,        x2: x + cell * 2, y2: y + size, 'stroke-width': SW }),
-    svgEl('line', { x1: x,            y1: y + cell,     x2: x + size, y2: y + cell,     'stroke-width': SW }),
-    svgEl('line', { x1: x,            y1: y + cell * 2, x2: x + size, y2: y + cell * 2, 'stroke-width': SW }),
+    svgEl('line', { x1: x + cell, y1: y, x2: x + cell, y2: y + size, 'stroke-width': SW }),
+    svgEl('line', { x1: x + cell * 2, y1: y, x2: x + cell * 2, y2: y + size, 'stroke-width': SW }),
+    svgEl('line', { x1: x, y1: y + cell, x2: x + size, y2: y + cell, 'stroke-width': SW }),
+    svgEl('line', { x1: x, y1: y + cell * 2, x2: x + size, y2: y + cell * 2, 'stroke-width': SW }),
   ]
 }
 
-function renderMarks(doc: PlotterDocument, board: Board): SVGElement[] {
+function renderMarks(doc: PlotterDocument, board: Board, mark: 'X' | 'O'): SVGElement[] {
   const { x, y, cell } = boardLayout(doc)
   const padding = cell * 0.18
   const r = cell / 2 - padding
   const elements: SVGElement[] = []
 
   for (let i = 0; i < 9; i++) {
-    const mark = board[i]
-    if (!mark) continue
+    const cellMark = board[i]
+    if (cellMark !== mark) continue
 
     const col = i % 3
     const row = Math.floor(i / 3)
@@ -63,10 +64,16 @@ export const ticTacToeModule: Module = {
   id: 'tictactoe',
 
   render(doc: PlotterDocument, layer: Layer): SVGElement[] {
-    const config = layer.moduleConfig as unknown as TicTacToeConfig
-    if (!config?.role || !config?.board) return []
+    if (layer.layerRole === 'registration') {
+      return renderRegistrationMarks(doc)
+    }
 
-    if (config.role === 'board') return renderBoard(doc)
-    return renderMarks(doc, config.board)
+    const config = getTicTacToeConfig(layer)
+    if (!config) return []
+
+    if (layer.layerRole === 'board') return renderBoard(doc)
+    if (layer.layerRole === 'player-x') return renderMarks(doc, config.board, 'X')
+    if (layer.layerRole === 'player-o') return renderMarks(doc, config.board, 'O')
+    return []
   },
 }
