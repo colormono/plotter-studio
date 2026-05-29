@@ -152,3 +152,107 @@ input[type='range'] {
   width: 100%;
   accent-color: #888;
 }
+
+/* Cell grid editor */
+.cellGrid {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.cellBtn {
+  aspect-ratio: 1;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 3px;
+  color: #555;
+  font-size: 0.65rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.1s, background 0.1s;
+  min-height: 20px;
+  padding: 0;
+}
+
+.cellBtn:hover {
+  border-color: #444;
+  color: #999;
+}
+
+.cellSelected {
+  border-color: #666;
+  background: #232323;
+  color: #ccc;
+}
+
+.cellSub {
+  border-color: #3a3a3a;
+  color: #888;
+}
+
+.cellSub.cellSelected {
+  border-color: #777;
+}
+
+.subIcon {
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.cellVal {
+  font-size: 0.6rem;
+  line-height: 1;
+}
+
+.cellDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #161616;
+  border-radius: 4px;
+  border: 1px solid #222;
+}
+
+.cellDetailLabel {
+  font-size: 0.7rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.addSubBtn {
+  background: none;
+  border: 1px dashed #3a3a3a;
+  border-radius: 4px;
+  color: #666;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+  align-self: flex-start;
+}
+
+.addSubBtn:hover {
+  border-color: #555;
+  color: #aaa;
+}
+
+.removeSubBtn {
+  background: none;
+  border: 1px solid #3a2222;
+  border-radius: 4px;
+  color: #7a4444;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  transition: border-color 0.1s, color 0.1s;
+  align-self: flex-start;
+}
+
+.removeSubBtn:hover {
+  border-color: #663333;
+  color: #cc6666;
+}

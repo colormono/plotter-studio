@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDocumentStore } from '../store/document'
 import { GridConfig, Cell } from '../types'
-import { DEFAULT_GRID_CONFIG } from '../lib/modules/grid'
+import { DEFAULT_GRID_CONFIG, DEFAULT_SUBGRID_CONFIG } from '../lib/modules/grid'
 import { generateValues, GeneratorMode, GeneratorOptions } from '../lib/generators'
 import styles from './GridConfigPanel.module.css'
 
@@ -35,10 +35,205 @@ function buildCells(rows: number, cols: number, values: number[][]): Cell[][] {
   )
 }
 
+function buildDefaultSubgridCells(rows: number, cols: number, maxValue: number): Cell[][] {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({
+      primaryValue: Math.floor(Math.random() * maxValue) + 1,
+      secondaryValue: null,
+      subgrid: null,
+    })),
+  )
+}
+
+interface CellGridEditorProps {
+  config: GridConfig
+  layerId: string
+  maxValue: number
+  maxDepth: number
+}
+
+function CellGridEditor({ config, layerId, maxValue, maxDepth }: CellGridEditorProps) {
+  const [selected, setSelected] = useState<[number, number] | null>(null)
+  const updateModuleConfig = useDocumentStore((s) => s.updateModuleConfig)
+  const updateCellSubgrid = useDocumentStore((s) => s.updateCellSubgrid)
+
+  function patchCell(r: number, c: number, patch: Partial<Cell>) {
+    const cells: Cell[][] = Array.from({ length: config.rows }, (_, ri) =>
+      Array.from({ length: config.cols }, (_, ci) => ({
+        primaryValue: 0,
+        secondaryValue: null,
+        subgrid: null,
+        ...(config.cells[ri]?.[ci] ?? {}),
+        ...(ri === r && ci === c ? patch : {}),
+      })),
+    )
+    updateModuleConfig(layerId, { ...config, cells })
+  }
+
+  const selectedCell =
+    selected !== null ? (config.cells[selected[0]]?.[selected[1]] ?? null) : null
+  const hasSubgrid = selectedCell?.subgrid != null
+  const currentDepth = 0
+
+  return (
+    <fieldset className={styles.fieldset}>
+      <legend>Cells</legend>
+
+      <div
+        className={styles.cellGrid}
+        style={{ gridTemplateColumns: `repeat(${config.cols}, 1fr)` }}
+        role="grid"
+        aria-label="Cell grid editor"
+      >
+        {Array.from({ length: config.rows }, (_, r) =>
+          Array.from({ length: config.cols }, (_, c) => {
+            const cell = config.cells[r]?.[c]
+            const isSelected = selected?.[0] === r && selected?.[1] === c
+            const isSub = cell?.subgrid != null
+
+            return (
+              <button
+                key={`${r}-${c}`}
+                role="gridcell"
+                aria-label={`Cell ${r + 1},${c + 1}${isSub ? ' (subgrid)' : ` value ${cell?.primaryValue ?? 0}`}`}
+                aria-selected={isSelected}
+                className={`${styles.cellBtn} ${isSelected ? styles.cellSelected : ''} ${isSub ? styles.cellSub : ''}`}
+                onClick={() => setSelected(isSelected ? null : [r, c])}
+              >
+                {isSub ? (
+                  <span className={styles.subIcon} aria-hidden>⊞</span>
+                ) : (
+                  <span className={styles.cellVal}>{cell?.primaryValue ?? 0}</span>
+                )}
+              </button>
+            )
+          }),
+        )}
+      </div>
+
+      {selected !== null && (
+        <div className={styles.cellDetail}>
+          {hasSubgrid ? (
+            <>
+              <span className={styles.cellDetailLabel}>
+                Subgrid ({selected[0] + 1},{selected[1] + 1})
+              </span>
+              <div className={styles.row2}>
+                <label className={styles.field}>
+                  <span>Rows</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={16}
+                    value={selectedCell!.subgrid!.rows}
+                    className={styles.numInput}
+                    onChange={(e) => {
+                      const rows = Math.max(1, parseInt(e.target.value) || 1)
+                      const cols = selectedCell!.subgrid!.cols
+                      patchCell(selected[0], selected[1], {
+                        subgrid: {
+                          ...selectedCell!.subgrid!,
+                          rows,
+                          cells: buildDefaultSubgridCells(rows, cols, maxValue),
+                        },
+                      })
+                    }}
+                  />
+                </label>
+                <label className={styles.field}>
+                  <span>Cols</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={16}
+                    value={selectedCell!.subgrid!.cols}
+                    className={styles.numInput}
+                    onChange={(e) => {
+                      const cols = Math.max(1, parseInt(e.target.value) || 1)
+                      const rows = selectedCell!.subgrid!.rows
+                      patchCell(selected[0], selected[1], {
+                        subgrid: {
+                          ...selectedCell!.subgrid!,
+                          cols,
+                          cells: buildDefaultSubgridCells(rows, cols, maxValue),
+                        },
+                      })
+                    }}
+                  />
+                </label>
+              </div>
+              <label className={styles.field}>
+                <span>Gutter (mm)</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={selectedCell!.subgrid!.gutter}
+                  className={styles.numInput}
+                  onChange={(e) =>
+                    patchCell(selected[0], selected[1], {
+                      subgrid: {
+                        ...selectedCell!.subgrid!,
+                        gutter: Math.max(0, parseFloat(e.target.value) || 0),
+                      },
+                    })
+                  }
+                />
+              </label>
+              <button
+                className={styles.removeSubBtn}
+                onClick={() => updateCellSubgrid(layerId, selected[0], selected[1], null)}
+              >
+                Remove subgrid
+              </button>
+            </>
+          ) : (
+            <>
+              <span className={styles.cellDetailLabel}>
+                Cell ({selected[0] + 1},{selected[1] + 1})
+              </span>
+              <label className={styles.field}>
+                <span>Value (0–{maxValue})</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={maxValue}
+                  value={selectedCell?.primaryValue ?? 0}
+                  className={styles.numInput}
+                  onChange={(e) =>
+                    patchCell(selected[0], selected[1], {
+                      primaryValue: Math.min(maxValue, Math.max(0, parseInt(e.target.value) || 0)),
+                    })
+                  }
+                />
+              </label>
+              {currentDepth < maxDepth && (
+                <button
+                  className={styles.addSubBtn}
+                  onClick={() => {
+                    const { rows, cols } = DEFAULT_SUBGRID_CONFIG
+                    updateCellSubgrid(layerId, selected[0], selected[1], {
+                      ...DEFAULT_SUBGRID_CONFIG,
+                      cells: buildDefaultSubgridCells(rows, cols, maxValue),
+                    })
+                  }}
+                >
+                  Add subgrid
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </fieldset>
+  )
+}
+
 export function GridConfigPanel() {
   const document = useDocumentStore((s) => s.document)
   const activeLayerId = useDocumentStore((s) => s.activeLayerId)
   const updateModuleConfig = useDocumentStore((s) => s.updateModuleConfig)
+  const updateMaxGridDepth = useDocumentStore((s) => s.updateMaxGridDepth)
 
   const [genMode, setGenMode] = useState<GeneratorMode>('random')
   const [density, setDensity] = useState(0.8)
@@ -54,12 +249,13 @@ export function GridConfigPanel() {
     ...(activeLayer.moduleConfig as Partial<GridConfig>),
   }
 
+  const maxValue = COLLECTIONS_WITH_VALUES[activeLayer.primaryCollection] ?? 6
+
   function patch(next: Partial<GridConfig>) {
     updateModuleConfig(activeLayer!.id, { ...config, ...next })
   }
 
   function handleGenerate() {
-    const maxValue = COLLECTIONS_WITH_VALUES[activeLayer!.primaryCollection] ?? 6
     const values = generateValues(config.rows, config.cols, {
       mode: genMode,
       maxValue,
@@ -78,6 +274,21 @@ export function GridConfigPanel() {
       </div>
 
       <div className={styles.body}>
+        {/* Max grid depth (document-level) */}
+        <label className={styles.field}>
+          <span>Max subgrid depth</span>
+          <input
+            type="number"
+            min={1}
+            max={6}
+            value={document.maxGridDepth}
+            className={styles.numInput}
+            onChange={(e) => updateMaxGridDepth(parseInt(e.target.value) || 1)}
+          />
+        </label>
+
+        <hr className={styles.divider} />
+
         {/* Rows / Cols */}
         <div className={styles.row2}>
           <label className={styles.field}>
@@ -179,6 +390,16 @@ export function GridConfigPanel() {
             }}
           />
         </label>
+
+        <hr className={styles.divider} />
+
+        {/* Cell grid editor */}
+        <CellGridEditor
+          config={config}
+          layerId={activeLayer.id}
+          maxValue={maxValue}
+          maxDepth={document.maxGridDepth}
+        />
 
         <hr className={styles.divider} />
 

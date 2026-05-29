@@ -1,11 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { PAPER_DIMENSIONS, Layer, PlotterDocument } from '../types'
-import { gridModule } from '../lib/modules/grid'
+import { MODULES } from '../lib/modules'
 import styles from './PlotterCanvas.module.css'
-
-const MODULES: Record<string, { render: (doc: PlotterDocument, layer: Layer) => SVGElement[] }> = {
-  grid: gridModule,
-}
 
 interface LayerGroupProps {
   document: PlotterDocument

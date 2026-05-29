@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { calculateGrid, checkPhysicalResolution, minCellSize, GridConfigError } from './grid'
-import { GridConfig, PaperDimensions } from '../types'
+import {
+  calculateGrid,
+  calculateGridInBounds,
+  checkPhysicalResolution,
+  minCellSize,
+  findMinCellSizeRecursive,
+  GridConfigError,
+} from './grid'
+import { GridConfig, PaperDimensions, Rect } from '../types'
 
 const A4: PaperDimensions = { width: 210, height: 297 }
 
@@ -136,13 +143,13 @@ describe('calculateGrid — margin errors', () => {
   it('throws when horizontal margins exceed paper width', () => {
     const config = makeConfig({ margins: { top: 10, right: 110, bottom: 10, left: 110 } })
     expect(() => calculateGrid(config, A4)).toThrow(GridConfigError)
-    expect(() => calculateGrid(config, A4)).toThrow(/exceed paper width/)
+    expect(() => calculateGrid(config, A4)).toThrow(/exceed available width/)
   })
 
   it('throws when vertical margins exceed paper height', () => {
     const config = makeConfig({ margins: { top: 150, right: 10, bottom: 150, left: 10 } })
     expect(() => calculateGrid(config, A4)).toThrow(GridConfigError)
-    expect(() => calculateGrid(config, A4)).toThrow(/exceed paper height/)
+    expect(() => calculateGrid(config, A4)).toThrow(/exceed available height/)
   })
 
   it('throws when rowWeights length mismatches rows', () => {
@@ -186,5 +193,91 @@ describe('minCellSize', () => {
     // smallest row is weight 1 out of sum 4 → 277/4 = 69.25
     expect(width).toBeCloseTo(190 / 5)
     expect(height).toBeCloseTo(277 / 4)
+  })
+})
+
+// ─── calculateGridInBounds ────────────────────────────────────────────────────
+
+describe('calculateGridInBounds', () => {
+  it('produces the same result as calculateGrid when bounds is the full paper', () => {
+    const config = makeConfig()
+    const paper = A4
+    const paperBounds: Rect = { x: 0, y: 0, width: paper.width, height: paper.height }
+    const fromPaper = calculateGrid(config, paper)
+    const fromBounds = calculateGridInBounds(config, paperBounds)
+    expect(fromBounds).toEqual(fromPaper)
+  })
+
+  it('positions cells relative to a sub-rect', () => {
+    const config = makeConfig({ margins: { top: 0, right: 0, bottom: 0, left: 0 }, rows: 2, cols: 2, gutter: 0 })
+    const parentBounds: Rect = { x: 50, y: 100, width: 60, height: 40 }
+    const result = calculateGridInBounds(config, parentBounds)
+    // each cell should be 30×20 starting at (50,100)
+    expect(result[0]![0]).toMatchObject({ x: 50, y: 100, width: 30, height: 20 })
+    expect(result[0]![1]).toMatchObject({ x: 80, y: 100, width: 30, height: 20 })
+    expect(result[1]![0]).toMatchObject({ x: 50, y: 120, width: 30, height: 20 })
+  })
+
+  it('throws GridConfigError when margins exceed bounds', () => {
+    const config = makeConfig({ margins: { top: 0, right: 50, bottom: 0, left: 50 } })
+    const bounds: Rect = { x: 0, y: 0, width: 60, height: 100 }
+    expect(() => calculateGridInBounds(config, bounds)).toThrow(GridConfigError)
+  })
+})
+
+// ─── findMinCellSizeRecursive ─────────────────────────────────────────────────
+
+describe('findMinCellSizeRecursive', () => {
+  const paperBounds: Rect = { x: 0, y: 0, width: A4.width, height: A4.height }
+
+  it('returns flat cell size when no subgrids', () => {
+    const config = makeConfig({ margins: baseMargins, rows: 2, cols: 2, gutter: 0 })
+    const { width, height } = findMinCellSizeRecursive(config, paperBounds, 3)
+    expect(width).toBeCloseTo(190 / 2)
+    expect(height).toBeCloseTo(277 / 2)
+  })
+
+  it('recurses into subgrid and returns the smaller size', () => {
+    const subgrid: GridConfig = {
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      gutter: 0,
+      rows: 10,
+      cols: 10,
+      rowWeights: null,
+      colWeights: null,
+      cells: [],
+    }
+    const config = makeConfig({
+      margins: baseMargins,
+      rows: 2,
+      cols: 2,
+      gutter: 0,
+      cells: [[{ primaryValue: 1, secondaryValue: null, subgrid }, { primaryValue: 0, secondaryValue: null, subgrid: null }]],
+    })
+    const { width } = findMinCellSizeRecursive(config, paperBounds, 3)
+    // parent cell is 190/2 = 95mm wide; subgrid divides it into 10 → ~9.5mm
+    expect(width).toBeCloseTo(95 / 10)
+  })
+
+  it('stops recursion at maxDepth', () => {
+    const deepSubgrid: GridConfig = {
+      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      gutter: 0,
+      rows: 100,
+      cols: 100,
+      rowWeights: null,
+      colWeights: null,
+      cells: [],
+    }
+    const config = makeConfig({
+      margins: baseMargins,
+      rows: 2,
+      cols: 2,
+      gutter: 0,
+      cells: [[{ primaryValue: 1, secondaryValue: null, subgrid: deepSubgrid }, { primaryValue: 0, secondaryValue: null, subgrid: null }]],
+    })
+    // maxDepth=0 means no subgrids are followed → parent cell size
+    const { width } = findMinCellSizeRecursive(config, paperBounds, 0)
+    expect(width).toBeCloseTo(190 / 2)
   })
 })

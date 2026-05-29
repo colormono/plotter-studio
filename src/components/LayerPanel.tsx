@@ -21,6 +21,7 @@ export function LayerPanel() {
   const document = useDocumentStore((s) => s.document)
   const activeLayerId = useDocumentStore((s) => s.activeLayerId)
   const addLayer = useDocumentStore((s) => s.addLayer)
+  const addTicTacToeModule = useDocumentStore((s) => s.addTicTacToeModule)
   const reorderLayers = useDocumentStore((s) => s.reorderLayers)
 
   const sensors = useSensors(
@@ -45,8 +46,16 @@ export function LayerPanel() {
     <div className={styles.panel}>
       <div className={styles.header}>
         <span className={styles.label}>Layers</span>
-        <button className={styles.addBtn} onClick={addLayer} title="Add layer" aria-label="Add layer">
+        <button className={styles.addBtn} onClick={addLayer} title="Add grid layer" aria-label="Add layer">
           +
+        </button>
+        <button
+          className={styles.addTttBtn}
+          onClick={addTicTacToeModule}
+          title="Add tictactoe module"
+          aria-label="Add tictactoe module"
+        >
+          ✕○
         </button>
       </div>
 

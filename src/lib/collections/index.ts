@@ -1,15 +1,27 @@
 import { Collection } from '../../types'
 import { silenceCollection } from './silence'
 import { regularTexturesCollection } from './regular-textures'
+import { geometricShapesCollection } from './geometric-shapes'
+import { diceCollection } from './dice'
+import { irregularTexturesCollection } from './irregular-textures'
 
 export { silenceCollection } from './silence'
 export { regularTexturesCollection } from './regular-textures'
+export { geometricShapesCollection } from './geometric-shapes'
+export { diceCollection } from './dice'
+export { irregularTexturesCollection } from './irregular-textures'
 
 /**
  * Central registry of all collections.
  * To add a new collection: import it and append to this array — no other changes needed.
  */
-export const COLLECTIONS: Collection[] = [silenceCollection, regularTexturesCollection]
+export const COLLECTIONS: Collection[] = [
+  silenceCollection,
+  regularTexturesCollection,
+  geometricShapesCollection,
+  diceCollection,
+  irregularTexturesCollection,
+]
 
 /**
  * Returns the collection with the given id.

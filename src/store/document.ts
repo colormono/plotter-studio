@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { PlotterDocument, PaperFormat, Layer, Technique, GridConfig } from '../types'
-import { DEFAULT_GRID_CONFIG } from '../lib/modules/grid'
+import { generateInitialGridConfig } from '../lib/modules/grid'
+import { generateGame } from '../lib/tictactoe'
+import type { TicTacToeConfig } from '../lib/modules/tictactoe'
 
 interface DocumentState {
   document: PlotterDocument | null
@@ -10,6 +12,15 @@ interface DocumentState {
   addLayer: () => void
   updateLayer: (id: string, patch: Partial<Omit<Layer, 'id'>>) => void
   updateModuleConfig: (id: string, config: GridConfig) => void
+  updateMaxGridDepth: (depth: number) => void
+  updateCellSubgrid: (
+    layerId: string,
+    row: number,
+    col: number,
+    subgrid: GridConfig | null,
+  ) => void
+  addTicTacToeModule: () => void
+  regenerateTicTacToe: (layerId: string) => void
   removeLayer: (id: string) => void
   duplicateLayer: (id: string) => void
   reorderLayers: (orderedIds: string[]) => void
@@ -31,7 +42,7 @@ function makeDefaultLayer(order: number): Layer {
     primaryCollection: 'regular-textures',
     secondaryCollection: null,
     module: 'grid',
-    moduleConfig: DEFAULT_GRID_CONFIG as unknown as Record<string, unknown>,
+    moduleConfig: generateInitialGridConfig() as unknown as Record<string, unknown>,
   }
 }
 
@@ -87,6 +98,94 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
           layers: state.document.layers.map((l) =>
             l.id === id ? { ...l, moduleConfig: config as unknown as Record<string, unknown> } : l,
           ),
+        },
+      }
+    }),
+
+  updateMaxGridDepth: (depth) =>
+    set((state) => {
+      if (!state.document) return state
+      return { document: { ...state.document, maxGridDepth: Math.max(1, depth) } }
+    }),
+
+  updateCellSubgrid: (layerId, row, col, subgrid) =>
+    set((state) => {
+      if (!state.document) return state
+      return {
+        document: {
+          ...state.document,
+          layers: state.document.layers.map((l) => {
+            if (l.id !== layerId) return l
+            const config = l.moduleConfig as unknown as GridConfig
+            const cells: GridConfig['cells'] = Array.from(
+              { length: config.rows },
+              (_, r) =>
+                Array.from({ length: config.cols }, (_, c) => ({
+                  ...(config.cells[r]?.[c] ?? {
+                    primaryValue: 0,
+                    secondaryValue: null,
+                    subgrid: null,
+                  }),
+                  ...(r === row && c === col ? { subgrid } : {}),
+                })),
+            )
+            return {
+              ...l,
+              moduleConfig: { ...config, cells } as unknown as Record<string, unknown>,
+            }
+          }),
+        },
+      }
+    }),
+
+  addTicTacToeModule: () =>
+    set((state) => {
+      if (!state.document) return state
+      const groupId = makeId()
+      const board = generateGame()
+      const order = state.document.layers.length
+
+      const makeLayer = (role: TicTacToeConfig['role'], name: string, offset: number): Layer => ({
+        id: makeId(),
+        name,
+        penColor: '#000000',
+        technique: 'draw' as Technique,
+        visible: true,
+        order: order + offset,
+        primaryCollection: 'silence',
+        secondaryCollection: null,
+        module: 'tictactoe',
+        moduleConfig: { role, board, groupId } as unknown as Record<string, unknown>,
+      })
+
+      const boardLayer = makeLayer('board', 'Tablero', 0)
+      const marksLayer = makeLayer('marks', 'Marcas', 1)
+
+      return {
+        document: {
+          ...state.document,
+          layers: [...state.document.layers, boardLayer, marksLayer],
+        },
+        activeLayerId: marksLayer.id,
+      }
+    }),
+
+  regenerateTicTacToe: (layerId) =>
+    set((state) => {
+      if (!state.document) return state
+      const layer = state.document.layers.find((l) => l.id === layerId)
+      if (!layer || layer.module !== 'tictactoe') return state
+      const { groupId } = layer.moduleConfig as unknown as TicTacToeConfig
+      const board = generateGame()
+      return {
+        document: {
+          ...state.document,
+          layers: state.document.layers.map((l) => {
+            if (l.module !== 'tictactoe') return l
+            const cfg = l.moduleConfig as unknown as TicTacToeConfig
+            if (cfg.groupId !== groupId) return l
+            return { ...l, moduleConfig: { ...cfg, board } as unknown as Record<string, unknown> }
+          }),
         },
       }
     }),

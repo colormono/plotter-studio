@@ -31,8 +31,24 @@
   padding: 0.1rem 0.4rem;
 }
 
-.newBtn {
+.exportBtn {
   margin-left: auto;
+  font-size: 0.8125rem;
+  background: none;
+  border: 1px solid #2a4a2a;
+  border-radius: 4px;
+  color: #5a9a5a;
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.exportBtn:hover {
+  color: #8acc8a;
+  border-color: #4a7a4a;
+}
+
+.newBtn {
   font-size: 0.8125rem;
   background: none;
   border: 1px solid #2a2a2a;
@@ -82,4 +98,20 @@
   flex: 1;
   display: flex;
   overflow: hidden;
+}
+
+.resolutionWarning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 1rem;
+  background: #1c1400;
+  border-bottom: 1px solid #3a2e00;
+  color: #c9a227;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.resolutionWarning strong {
+  color: #e8c050;
 }

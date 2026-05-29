@@ -7,9 +7,7 @@ Extender el módulo `grid` para soportar subgrillas recursivas. Cualquier celda 
 Las subgrillas heredan la colección primaria de su capa padre, pero tienen configuración geométrica propia (filas, columnas, márgenes interiores, pesos). La función `calculateGrid` ya soporta esto; este slice agrega el soporte en el render del módulo y en la UI.
 
 **UI para subgrillas:**
-- Clic derecho (o menú contextual) sobre una celda → "Convertir en subgrilla"
 - Al activar subgrilla, la celda muestra el panel de configuración de grilla en lugar del editor de valor
-- Clic en "Quitar subgrilla" convierte la celda de vuelta a celda simple
 
 **Advertencia de resolución física:**
 - Calcular el tamaño mínimo de celda en todo el documento (incluyendo subgrillas)
@@ -17,7 +15,7 @@ Las subgrillas heredan la colección primaria de su capa padre, pero tienen conf
 
 ## Acceptance criteria
 
-- [ ] El usuario puede convertir cualquier celda en una subgrilla mediante menú contextual
+- [ ] Cada celda puede tener una subgrilla de forma aleatoria
 - [ ] La subgrilla renderiza dentro del bounds de la celda padre
 - [ ] La recursión se detiene en `document.maxGridDepth` (subgrillas más profundas se ignoran)
 - [ ] Las subgrillas usan la colección de su capa padre

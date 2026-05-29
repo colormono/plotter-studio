@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { COLLECTIONS, getCollection, renderCollection } from './index'
 import { silenceCollection } from './silence'
 import { regularTexturesCollection } from './regular-textures'
+import { geometricShapesCollection } from './geometric-shapes'
+import { diceCollection } from './dice'
+import { irregularTexturesCollection } from './irregular-textures'
 import { Rect } from '../../types'
 
 const bounds: Rect = { x: 10, y: 10, width: 60, height: 60 }
@@ -13,10 +16,13 @@ describe('COLLECTIONS', () => {
     expect(COLLECTIONS.length).toBeGreaterThan(0)
   })
 
-  it('contains silence and regular-textures', () => {
+  it('contains all five registered collections', () => {
     const ids = COLLECTIONS.map((c) => c.id)
     expect(ids).toContain('silence')
     expect(ids).toContain('regular-textures')
+    expect(ids).toContain('geometric-shapes')
+    expect(ids).toContain('dice')
+    expect(ids).toContain('irregular-textures')
   })
 
   it('every entry has id, label and render function', () => {
@@ -125,5 +131,100 @@ describe('regular-textures collection', () => {
     for (const el of els) {
       expect(el.getAttribute('stroke-width')).not.toBeNull()
     }
+  })
+})
+
+// ─── geometric-shapes ────────────────────────────────────────────────────────
+
+describe('geometric-shapes collection', () => {
+  it('values 1–5 each return a non-empty array', () => {
+    for (let v = 1; v <= 5; v++) {
+      expect(geometricShapesCollection.render(v, bounds).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('value 0 returns []', () => {
+    expect(geometricShapesCollection.render(0, bounds)).toEqual([])
+  })
+
+  it('values 1–5 produce distinct element counts (distinct shapes)', () => {
+    const counts = [1, 2, 3, 4, 5].map((v) => geometricShapesCollection.render(v, bounds).length)
+    expect(new Set(counts).size).toBeGreaterThan(1)
+  })
+
+  it('no element has fill other than none', () => {
+    for (let v = 1; v <= 5; v++) {
+      assertNoFill(geometricShapesCollection.render(v, bounds))
+    }
+  })
+
+  it('wraps around — value 6 behaves like value 1', () => {
+    const els1 = geometricShapesCollection.render(1, bounds)
+    const els6 = geometricShapesCollection.render(6, bounds)
+    expect(els6.length).toBe(els1.length)
+  })
+})
+
+// ─── dice ─────────────────────────────────────────────────────────────────────
+
+describe('dice collection', () => {
+  it('values 1–6 each return a non-empty array', () => {
+    for (let v = 1; v <= 6; v++) {
+      expect(diceCollection.render(v, bounds).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('value 0 returns []', () => {
+    expect(diceCollection.render(0, bounds)).toEqual([])
+  })
+
+  it('each face has the expected number of elements (border + dots)', () => {
+    // 1 border + N dots
+    expect(diceCollection.render(1, bounds).length).toBe(2)  // border + 1 dot
+    expect(diceCollection.render(2, bounds).length).toBe(3)  // border + 2 dots
+    expect(diceCollection.render(3, bounds).length).toBe(4)
+    expect(diceCollection.render(4, bounds).length).toBe(5)
+    expect(diceCollection.render(5, bounds).length).toBe(6)
+    expect(diceCollection.render(6, bounds).length).toBe(7)
+  })
+
+  it('no element has fill other than none', () => {
+    for (let v = 1; v <= 6; v++) {
+      assertNoFill(diceCollection.render(v, bounds))
+    }
+  })
+})
+
+// ─── irregular-textures ──────────────────────────────────────────────────────
+
+describe('irregular-textures collection', () => {
+  it('values 1–4 each return a non-empty array', () => {
+    for (let v = 1; v <= 4; v++) {
+      expect(irregularTexturesCollection.render(v, bounds).length).toBeGreaterThan(0)
+    }
+  })
+
+  it('value 0 returns []', () => {
+    expect(irregularTexturesCollection.render(0, bounds)).toEqual([])
+  })
+
+  it('no element has fill other than none', () => {
+    for (let v = 1; v <= 4; v++) {
+      assertNoFill(irregularTexturesCollection.render(v, bounds))
+    }
+  })
+
+  it('scattered dots (value 3) are reproducible — same bounds → same count', () => {
+    const a = irregularTexturesCollection.render(3, bounds)
+    const b = irregularTexturesCollection.render(3, bounds)
+    expect(a.length).toBe(b.length)
+  })
+
+  it('scattered dots differ between cells at different positions', () => {
+    const boundsA: Rect = { x: 10, y: 10, width: 60, height: 60 }
+    const boundsB: Rect = { x: 80, y: 10, width: 60, height: 60 }
+    const aCoords = irregularTexturesCollection.render(3, boundsA).map((el) => el.getAttribute('cx'))
+    const bCoords = irregularTexturesCollection.render(3, boundsB).map((el) => el.getAttribute('cx'))
+    expect(aCoords).not.toEqual(bCoords)
   })
 })

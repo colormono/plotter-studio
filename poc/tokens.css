@@ -1,0 +1,114 @@
+/* ============================================================
+   Dulce design tokens
+   Built on shadcn/ui's neutral palette with one warm accent.
+   Import once — every component below reads from these vars.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* --- Color: neutrals -------------------------------------- */
+  --ink:           #0A0A0A;   /* primary text, primary action  */
+  --ink-2:         #171717;   /* secondary text on white       */
+  --mute:          #737373;   /* placeholder, helper, disabled */
+  --mute-2:        #A1A1AA;   /* extra-quiet meta text         */
+  --hairline:      #E5E5E5;   /* every border, every divider   */
+  --surface:       #FFFFFF;   /* page + card background        */
+  --surface-soft:  #F5F5F5;   /* hover, secondary button fill  */
+  --surface-tint:  #FAFAFA;   /* sectioned sub-surface         */
+
+  /* --- Color: brand ---------------------------------------- */
+  --dulce:         #E26A4F;   /* Dulce coral — warm accent     */
+  --dulce-soft:    #FBE9E2;   /* pale tint, brand surfaces     */
+  --dulce-ink:     #8C2A14;   /* on-coral readable text        */
+
+  /* --- Color: semantic ------------------------------------- */
+  --info:          #0090FF;
+  --info-soft:     #E6F4FF;
+  --success:       #16A34A;
+  --success-soft:  #ECFDF5;
+  --warning:       #D97706;
+  --warning-soft:  #FFF7ED;
+  --danger:        #DC2626;
+  --danger-soft:   #FEF2F2;
+  --highlight:     #ADFA1D;   /* chart highlight only          */
+
+  /* --- Type: families -------------------------------------- */
+  --font-display:  'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-ui:       'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:     'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* --- Type: scale (px) ------------------------------------ */
+  --t-12: 12px;
+  --t-13: 13px;
+  --t-14: 14px;   /* default UI                               */
+  --t-16: 16px;   /* body                                      */
+  --t-18: 18px;
+  --t-20: 20px;
+  --t-24: 24px;
+  --t-30: 30px;
+  --t-36: 36px;   /* page title                                */
+  --t-48: 48px;
+  --t-72: 72px;
+
+  /* --- Spacing (px) ---------------------------------------- */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-8:  32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-14: 56px;
+  --s-16: 64px;
+
+  /* --- Radius ---------------------------------------------- */
+  --r-sm:   6px;   /* inputs, badges                           */
+  --r-md:   8px;   /* buttons                                  */
+  --r-lg:   10px;  /* icon buttons                             */
+  --r-xl:   12px;  /* menus, small cards                       */
+  --r-2xl:  16px;  /* medium cards                             */
+  --r-3xl:  24px;  /* big surfaces                             */
+  --r-pill: 9999px;
+
+  /* --- Shadow ---------------------------------------------- */
+  --shadow-xs: 0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.10);
+  --shadow-md: 0 4px 12px 0 rgba(0,0,0,0.08);
+  --shadow-lg: 0 10px 24px 0 rgba(0,0,0,0.12);
+
+  /* --- Motion ---------------------------------------------- */
+  --motion-fast:   100ms ease-out;
+  --motion-base:   150ms ease-out;
+  --motion-slow:   250ms ease-out;
+}
+
+/* ============================================================
+   Semantic type roles. Use these instead of raw font sizes.
+   ============================================================ */
+
+.t-display    { font-family: var(--font-display); font-size: var(--t-72); line-height: 1.05; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); }
+.t-h1         { font-family: var(--font-display); font-size: var(--t-36); line-height: 40px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.t-h2         { font-family: var(--font-display); font-size: var(--t-30); line-height: 36px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+.t-h3         { font-family: var(--font-display); font-size: var(--t-24); line-height: 32px; font-weight: 600; color: var(--ink); }
+.t-h4         { font-family: var(--font-display); font-size: var(--t-20); line-height: 28px; font-weight: 600; color: var(--ink); }
+.t-lead       { font-family: var(--font-ui); font-size: var(--t-18); line-height: 28px; color: var(--mute); }
+.t-body       { font-family: var(--font-ui); font-size: var(--t-16); line-height: 24px; color: var(--ink); }
+.t-body-mute  { font-family: var(--font-ui); font-size: var(--t-16); line-height: 24px; color: var(--mute); }
+.t-ui         { font-family: var(--font-ui); font-size: var(--t-14); line-height: 20px; color: var(--ink); }
+.t-ui-medium  { font-family: var(--font-ui); font-size: var(--t-14); line-height: 20px; font-weight: 500; color: var(--ink); }
+.t-meta       { font-family: var(--font-ui); font-size: var(--t-12); line-height: 16px; color: var(--mute); }
+.t-mono       { font-family: var(--font-mono); font-size: var(--t-13); line-height: 20px; color: var(--ink); }
+
+/* element baselines (so you don't have to add classes) */
+html, body { font-family: var(--font-ui); color: var(--ink); background: var(--surface); -webkit-font-smoothing: antialiased; }
+h1 { font-family: var(--font-display); font-size: var(--t-36); line-height: 40px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+h2 { font-family: var(--font-display); font-size: var(--t-30); line-height: 36px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+h3 { font-family: var(--font-display); font-size: var(--t-24); line-height: 32px; font-weight: 600; margin: 0; }
+h4 { font-family: var(--font-display); font-size: var(--t-20); line-height: 28px; font-weight: 600; margin: 0; }
+p  { font-size: var(--t-16); line-height: 24px; color: var(--ink); margin: 0; }
+small { font-size: var(--t-12); color: var(--mute); }
+code, pre { font-family: var(--font-mono); font-size: var(--t-13); }
+hr { border: 0; border-top: 1px solid var(--hairline); margin: 0; }
