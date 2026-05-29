@@ -1,9 +1,11 @@
 import { PlotterDocument, Layer } from '../../types'
 import { gridModule } from './grid'
 import { ticTacToeModule } from './tictactoe'
+import { testSheetModule } from './test-sheet'
 
 export { gridModule } from './grid'
 export { ticTacToeModule } from './tictactoe'
+export { testSheetModule } from './test-sheet'
 
 export const MODULES: Record<
   string,
@@ -11,4 +13,5 @@ export const MODULES: Record<
 > = {
   grid: gridModule,
   tictactoe: ticTacToeModule,
+  'test-sheet': testSheetModule,
 }

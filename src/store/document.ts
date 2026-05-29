@@ -3,11 +3,13 @@ import { PlotterDocument, PaperFormat, Layer, Technique, GridConfig } from '../t
 import { generateInitialGridConfig } from '../lib/modules/grid'
 import { generateGame } from '../lib/tictactoe'
 import type { TicTacToeConfig } from '../lib/modules/tictactoe'
+import { saveAutosave } from '../lib/persistence'
 
 interface DocumentState {
   document: PlotterDocument | null
   activeLayerId: string | null
   createDocument: (name: string, paperFormat: PaperFormat) => void
+  loadDocument: (doc: PlotterDocument) => void
   clearDocument: () => void
   addLayer: () => void
   updateLayer: (id: string, patch: Partial<Omit<Layer, 'id'>>) => void
@@ -21,6 +23,7 @@ interface DocumentState {
   ) => void
   addTicTacToeModule: () => void
   regenerateTicTacToe: (layerId: string) => void
+  addTestSheetModule: () => void
   removeLayer: (id: string) => void
   duplicateLayer: (id: string) => void
   reorderLayers: (orderedIds: string[]) => void
@@ -64,6 +67,12 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     }),
 
   clearDocument: () => set({ document: null, activeLayerId: null }),
+
+  loadDocument: (doc) =>
+    set({
+      document: doc,
+      activeLayerId: doc.layers[0]?.id ?? null,
+    }),
 
   addLayer: () =>
     set((state) => {
@@ -190,6 +199,27 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       }
     }),
 
+  addTestSheetModule: () =>
+    set((state) => {
+      if (!state.document) return state
+      const layer: Layer = {
+        id: makeId(),
+        name: 'test-sheet',
+        penColor: '#000000',
+        technique: 'draw' as Technique,
+        visible: true,
+        order: state.document.layers.length,
+        primaryCollection: 'silence',
+        secondaryCollection: null,
+        module: 'test-sheet',
+        moduleConfig: {},
+      }
+      return {
+        document: { ...state.document, layers: [...state.document.layers, layer] },
+        activeLayerId: layer.id,
+      }
+    }),
+
   removeLayer: (id) =>
     set((state) => {
       if (!state.document) return state
@@ -237,3 +267,13 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({ activeLayerId: id })
   },
 }))
+
+let _prevDocument: PlotterDocument | null = null
+useDocumentStore.subscribe((state) => {
+  if (state.document !== _prevDocument) {
+    _prevDocument = state.document
+    if (state.document) {
+      saveAutosave(state.document)
+    }
+  }
+})

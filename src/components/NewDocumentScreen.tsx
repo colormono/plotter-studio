@@ -1,14 +1,36 @@
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, useEffect } from 'react'
 import { PaperFormat, PAPER_DIMENSIONS } from '../types'
 import { useDocumentStore } from '../store/document'
+import { loadAutosave, clearAutosave } from '../lib/persistence'
 import styles from './NewDocumentScreen.module.css'
 
 const PAPER_FORMATS = Object.keys(PAPER_DIMENSIONS) as PaperFormat[]
 
 export function NewDocumentScreen() {
   const createDocument = useDocumentStore((s) => s.createDocument)
+  const loadDocument = useDocumentStore((s) => s.loadDocument)
   const [name, setName] = useState('Untitled')
   const [format, setFormat] = useState<PaperFormat>('A4')
+  const [showRestore, setShowRestore] = useState(false)
+  const [autosaveName, setAutosaveName] = useState<string | null>(null)
+
+  useEffect(() => {
+    const saved = loadAutosave()
+    if (saved) {
+      setAutosaveName(saved.name)
+      setShowRestore(true)
+    }
+  }, [])
+
+  function handleRestore() {
+    const saved = loadAutosave()
+    if (saved) loadDocument(saved)
+  }
+
+  function handleDiscard() {
+    clearAutosave()
+    setShowRestore(false)
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -21,6 +43,23 @@ export function NewDocumentScreen() {
     <div className={styles.screen}>
       <div className={styles.card}>
         <h1 className={styles.title}>Plotter Studio</h1>
+
+        {showRestore && (
+          <div className={styles.restoreBanner}>
+            <p className={styles.restoreText}>
+              Unsaved session found: <strong>{autosaveName}</strong>
+            </p>
+            <div className={styles.restoreActions}>
+              <button className={styles.restoreBtn} onClick={handleRestore}>
+                Restore
+              </button>
+              <button className={styles.discardBtn} onClick={handleDiscard}>
+                Discard
+              </button>
+            </div>
+          </div>
+        )}
+
         <p className={styles.subtitle}>New document</p>
 
         <form onSubmit={handleSubmit} className={styles.form}>

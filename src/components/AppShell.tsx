@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useRef, useState } from 'react'
 import { useDocumentStore } from '../store/document'
 import { PlotterCanvas } from './PlotterCanvas'
 import { LayerPanel } from './LayerPanel'
@@ -9,6 +9,7 @@ import { PAPER_DIMENSIONS, GridConfig } from '../types'
 import { DEFAULT_GRID_CONFIG } from '../lib/modules/grid'
 import { findMinCellSizeRecursive } from '../lib/grid'
 import { buildExportSvg, downloadSvg } from '../lib/export'
+import { downloadDocument, openDocumentFromFile } from '../lib/persistence'
 import styles from './AppShell.module.css'
 
 const RESOLUTION_THRESHOLD_MM = 2
@@ -16,6 +17,9 @@ const RESOLUTION_THRESHOLD_MM = 2
 export function AppShell() {
   const document = useDocumentStore((s) => s.document)
   const clearDocument = useDocumentStore((s) => s.clearDocument)
+  const loadDocument = useDocumentStore((s) => s.loadDocument)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [openError, setOpenError] = useState<string | null>(null)
 
   const resolutionWarning = useMemo(() => {
     if (!document) return null
@@ -48,6 +52,33 @@ export function AppShell() {
     downloadSvg(svgString, document.name)
   }, [document])
 
+  const handleSave = useCallback(() => {
+    if (!document) return
+    downloadDocument(document)
+  }, [document])
+
+  const handleOpenClick = useCallback(() => {
+    setOpenError(null)
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      openDocumentFromFile(
+        file,
+        (doc) => {
+          loadDocument(doc)
+          setOpenError(null)
+        },
+        (msg) => setOpenError(msg),
+      )
+      e.target.value = ''
+    },
+    [loadDocument],
+  )
+
   if (!document) return null
 
   const visibleLayers = document.layers.filter((l) => l.visible)
@@ -60,10 +91,32 @@ export function AppShell() {
         <button className={styles.exportBtn} onClick={handleExport} aria-label="Export SVG">
           Export SVG
         </button>
+        <button className={styles.saveBtn} onClick={handleSave} aria-label="Save document">
+          Save
+        </button>
+        <button className={styles.openBtn} onClick={handleOpenClick} aria-label="Open document">
+          Open
+        </button>
         <button className={styles.newBtn} onClick={clearDocument}>
           New
         </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".plotter.json"
+          onChange={handleFileChange}
+          aria-hidden="true"
+          style={{ display: 'none' }}
+        />
       </header>
+
+      {openError && (
+        <div className={styles.openError} role="alert">
+          <span>⚠</span>
+          <span>{openError}</span>
+          <button onClick={() => setOpenError(null)} aria-label="Dismiss error">✕</button>
+        </div>
+      )}
 
       {resolutionWarning !== null && (
         <div className={styles.resolutionWarning} role="alert">

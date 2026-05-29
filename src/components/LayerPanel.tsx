@@ -22,6 +22,7 @@ export function LayerPanel() {
   const activeLayerId = useDocumentStore((s) => s.activeLayerId)
   const addLayer = useDocumentStore((s) => s.addLayer)
   const addTicTacToeModule = useDocumentStore((s) => s.addTicTacToeModule)
+  const addTestSheetModule = useDocumentStore((s) => s.addTestSheetModule)
   const reorderLayers = useDocumentStore((s) => s.reorderLayers)
 
   const sensors = useSensors(
@@ -56,6 +57,14 @@ export function LayerPanel() {
           aria-label="Add tictactoe module"
         >
           ✕○
+        </button>
+        <button
+          className={styles.addTttBtn}
+          onClick={addTestSheetModule}
+          title="Add test sheet"
+          aria-label="Add test sheet"
+        >
+          ⊕
         </button>
       </div>
 
