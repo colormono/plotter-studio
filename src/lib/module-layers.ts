@@ -1,6 +1,8 @@
 import { Layer, LayerRole, ModuleId, Technique } from '../types'
 import { generateGame } from './tictactoe'
 import type { TicTacToeConfig } from './modules/tictactoe'
+import type { LoadedSvgConfig } from './loaded-svg'
+import { DEFAULT_CHAIN_CONFIG, normalizeChainConfig, type ChainConfig } from './chain-calendar'
 
 function makeId(): string {
   return crypto.randomUUID()
@@ -50,6 +52,15 @@ export function isFixedLayer(layer: Layer): boolean {
     return true
   }
   if (layer.module === 'test-sheet' && (layer.layerRole === 'content' || layer.layerRole === 'cut')) {
+    return true
+  }
+  if (layer.module === 'loaded-svg' && (layer.layerRole === 'content' || layer.layerRole === 'cut')) {
+    return true
+  }
+  if (
+    layer.module === 'chain' &&
+    (layer.layerRole === 'title' || layer.layerRole === 'calendar' || layer.layerRole === 'cut')
+  ) {
     return true
   }
   return false
@@ -188,6 +199,89 @@ export function createTestSheetModuleLayers(): Layer[] {
   ]
 }
 
+export function createLoadedSvgModuleLayers(): Layer[] {
+  const groupId = makeId()
+  const sharedConfig = { groupId } as unknown as Record<string, unknown>
+
+  return [
+    registrationLayer(0, 'loaded-svg'),
+    {
+      ...baseLayer({
+        name: 'Dibujo',
+        penColor: '#0A0A0A',
+        technique: 'draw',
+        order: 1,
+        layerRole: 'content',
+        primaryCollection: 'regular-textures',
+        collectionWeight: 0,
+        moduleConfig: sharedConfig,
+      }),
+      module: 'loaded-svg',
+    },
+    {
+      ...baseLayer({
+        name: 'Corte',
+        penColor: '#DC2626',
+        technique: 'cut',
+        order: 2,
+        layerRole: 'cut',
+        primaryCollection: 'regular-textures',
+        collectionWeight: 0,
+        moduleConfig: sharedConfig,
+      }),
+      module: 'loaded-svg',
+    },
+  ]
+}
+
+export function createChainModuleLayers(): Layer[] {
+  const groupId = makeId()
+  const sharedConfig = { ...DEFAULT_CHAIN_CONFIG, groupId } as unknown as Record<string, unknown>
+
+  return [
+    registrationLayer(0, 'chain'),
+    {
+      ...baseLayer({
+        name: 'Título',
+        penColor: '#0A0A0A',
+        technique: 'draw',
+        order: 1,
+        layerRole: 'title',
+        primaryCollection: 'regular-textures',
+        collectionWeight: 0,
+        moduleConfig: sharedConfig,
+      }),
+      module: 'chain',
+    },
+    {
+      ...baseLayer({
+        name: 'Calendario',
+        penColor: '#0A0A0A',
+        technique: 'draw',
+        order: 2,
+        layerRole: 'calendar',
+        primaryCollection: 'regular-textures',
+        collectionWeight: 0,
+        moduleConfig: sharedConfig,
+      }),
+      module: 'chain',
+    },
+    {
+      ...baseLayer({
+        name: 'Corte',
+        penColor: '#DC2626',
+        technique: 'cut',
+        order: 3,
+        layerRole: 'cut',
+        primaryCollection: 'regular-textures',
+        collectionWeight: 0,
+        moduleConfig: sharedConfig,
+      }),
+      module: 'chain',
+    },
+  ]
+}
+
 export function createLayersForModule(moduleId: ModuleId): Layer[] {
   switch (moduleId) {
     case 'grid':
@@ -196,6 +290,10 @@ export function createLayersForModule(moduleId: ModuleId): Layer[] {
       return createTicTacToeModuleLayers()
     case 'test-sheet':
       return createTestSheetModuleLayers()
+    case 'loaded-svg':
+      return createLoadedSvgModuleLayers()
+    case 'chain':
+      return createChainModuleLayers()
   }
 }
 
@@ -213,6 +311,22 @@ export function getTicTacToeConfig(layer: Layer): TicTacToeConfig | null {
   if (layer.module !== 'tictactoe') return null
   const cfg = layer.moduleConfig as unknown as TicTacToeConfig
   if (!cfg?.board || !cfg?.groupId) return null
+  return cfg
+}
+
+export function getChainConfig(layer: Layer): ChainConfig | null {
+  if (layer.module !== 'chain') return null
+  const cfg = layer.moduleConfig as unknown as ChainConfig
+  if (!cfg?.groupId) return null
+  return normalizeChainConfig(cfg)
+}
+
+export function getLoadedSvgConfig(layer: Layer): LoadedSvgConfig | null {
+  if (layer.module !== 'loaded-svg') return null
+  const cfg = layer.moduleConfig as unknown as LoadedSvgConfig
+  if (!cfg?.groupId) return null
+  const nodes = cfg.nodes ?? cfg.elements
+  if (!nodes?.length) return null
   return cfg
 }
 

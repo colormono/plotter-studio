@@ -5,11 +5,13 @@ import {
   GitFork,
   Grid3x3,
   Hash,
+  Image,
+  Link2,
   Spline,
 } from 'lucide-react'
 import { Icon } from './Icon'
 
-export type ModuleId = 'grid' | 'tictactoe' | 'test-sheet'
+export type ModuleId = 'grid' | 'tictactoe' | 'test-sheet' | 'loaded-svg' | 'chain'
 
 interface ModuleDef {
   id: ModuleId | string
@@ -22,6 +24,8 @@ const MODULES: ModuleDef[] = [
   { id: 'grid', name: 'grid', icon: Grid3x3 },
   { id: 'tictactoe', name: 'tictactoe', icon: Hash },
   { id: 'test-sheet', name: 'test-sheet', icon: FileText },
+  { id: 'loaded-svg', name: 'loaded-svg', icon: Image },
+  { id: 'chain', name: 'chain', icon: Link2 },
   { id: 'p5', name: 'p5', icon: Spline, soon: true },
   { id: 'd3', name: 'd3', icon: GitFork, soon: true },
   { id: 'threejs', name: 'three.js', icon: Box, soon: true },

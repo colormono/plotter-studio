@@ -60,6 +60,8 @@ function gridFromLegacyLayer(config: Partial<GridConfig>, maxDepth: number): Gri
 function inferModuleId(layers: Layer[]): ModuleId {
   if (layers.some((l) => l.module === 'tictactoe')) return 'tictactoe'
   if (layers.some((l) => l.module === 'test-sheet')) return 'test-sheet'
+  if (layers.some((l) => l.module === 'loaded-svg')) return 'loaded-svg'
+  if (layers.some((l) => l.module === 'chain')) return 'chain'
   return 'grid'
 }
 
@@ -79,6 +81,17 @@ function normalizeLayer(layer: Layer, moduleId: ModuleId, order: number): Layer 
 
   if (moduleId === 'test-sheet' && layer.module === 'test-sheet' && !layerRole) {
     layerRole = layer.technique === 'cut' ? 'cut' : 'content'
+  }
+
+  if (moduleId === 'loaded-svg' && layer.module === 'loaded-svg' && !layerRole) {
+    layerRole = layer.technique === 'cut' ? 'cut' : 'content'
+  }
+
+  if (moduleId === 'chain' && layer.module === 'chain' && !layerRole) {
+    if (layer.technique === 'cut') layerRole = 'cut'
+    else if (layer.name.toLowerCase().includes('título') || layer.name.toLowerCase().includes('titulo')) {
+      layerRole = 'title'
+    } else layerRole = 'calendar'
   }
 
   if (moduleId === 'grid' && layer.module === 'grid' && layer.gridRole && !layer.layerRole) {

@@ -16,6 +16,8 @@ import { CollectionsPanel } from './CollectionsPanel'
 import { PaperPanel } from './PaperPanel'
 import { GridConfigPanel } from './GridConfigPanel'
 import { TicTacToePanel } from './TicTacToePanel'
+import { LoadedSvgPanel } from './LoadedSvgPanel'
+import { ChainPanel } from './ChainPanel'
 import { Icon } from './Icon'
 import { generateArt } from '../lib/art-engine'
 import { formatPaperLabel, getPaperDimensions } from '../lib/paper'
@@ -309,6 +311,8 @@ export function AppShell() {
           </>
         )}
         {activeModule === 'tictactoe' && <TicTacToePanel />}
+        {activeModule === 'loaded-svg' && <LoadedSvgPanel />}
+        {activeModule === 'chain' && <ChainPanel />}
         {activeModule === 'test-sheet' && (
           <div className="sec">
             <div className="sec__h">

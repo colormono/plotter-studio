@@ -12,10 +12,16 @@ import {
   createGridContentLayer,
   createLayersForModule,
   defaultActiveLayerId,
+  getChainConfig,
+  getLoadedSvgConfig,
   getTicTacToeConfig,
   isContentLayer,
   isFixedLayer,
 } from '../lib/module-layers'
+import { defaultPlacement, normalizeRotation, type LoadedSvgPlacement } from '../lib/loaded-svg'
+import { readSvgFile } from '../lib/svg-import'
+import { getPaperDimensions } from '../lib/paper'
+import { clampDays, type ChainConfig } from '../lib/chain-calendar'
 import { DEFAULT_GRID_SPEC } from '../lib/art-engine'
 import { generateGame } from '../lib/tictactoe'
 import { nextSeed } from '../lib/rng'
@@ -38,6 +44,10 @@ interface DocumentState {
   regenerate: () => void
   addGridLayer: (name: string, penColor: string, technique: Technique) => void
   regenerateTicTacToe: (layerId: string) => void
+  loadSvgFile: (file: File) => Promise<void>
+  updateLoadedSvgPlacement: (patch: Partial<LoadedSvgPlacement>) => void
+  rotateLoadedSvg: (deltaDegrees: number) => void
+  updateChainConfig: (patch: Partial<Omit<ChainConfig, 'groupId'>>) => void
   removeLayer: (id: string) => void
   reorderLayers: (orderedIds: string[]) => void
   setActiveLayer: (id: string | null) => void
@@ -201,6 +211,123 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
             const c = getTicTacToeConfig(l)
             if (!c || c.groupId !== cfg.groupId) return l
             return { ...l, moduleConfig: { ...c, board } as unknown as Record<string, unknown> }
+          }),
+        },
+      }
+    }),
+
+  loadSvgFile: async (file) => {
+    const state = get()
+    if (!state.document || state.document.moduleId !== 'loaded-svg') return
+
+    const parsed = await readSvgFile(file)
+    const paper = getPaperDimensions(state.document)
+    const contentLayer = state.document.layers.find(
+      (l) => l.module === 'loaded-svg' && l.layerRole === 'content',
+    )
+    const groupId =
+      (contentLayer?.moduleConfig as { groupId?: string } | undefined)?.groupId ?? makeId()
+
+    const config = {
+      groupId,
+      sourceFileName: parsed.sourceFileName,
+      viewBox: parsed.viewBox,
+      nodes: parsed.nodes,
+      placement: defaultPlacement(parsed.viewBox, paper, state.document.margin),
+    }
+
+    set({
+      document: {
+        ...state.document,
+        layers: state.document.layers.map((l) => {
+          if (l.module !== 'loaded-svg') return l
+          return { ...l, moduleConfig: config as unknown as Record<string, unknown> }
+        }),
+      },
+    })
+  },
+
+  updateLoadedSvgPlacement: (patch) =>
+    set((state) => {
+      if (!state.document || state.document.moduleId !== 'loaded-svg') return state
+      const contentLayer = state.document.layers.find(
+        (l) => l.module === 'loaded-svg' && l.layerRole === 'content',
+      )
+      const cfg = contentLayer ? getLoadedSvgConfig(contentLayer) : null
+      if (!cfg) return state
+
+      const placement: LoadedSvgPlacement = {
+        ...cfg.placement,
+        ...patch,
+        rotation: patch.rotation != null ? normalizeRotation(patch.rotation) : cfg.placement.rotation,
+      }
+
+      return {
+        document: {
+          ...state.document,
+          layers: state.document.layers.map((l) => {
+            if (l.module !== 'loaded-svg') return l
+            const c = l.moduleConfig as unknown as typeof cfg
+            if (c.groupId !== cfg.groupId) return l
+            return {
+              ...l,
+              moduleConfig: { ...cfg, placement } as unknown as Record<string, unknown>,
+            }
+          }),
+        },
+      }
+    }),
+
+  rotateLoadedSvg: (deltaDegrees) =>
+    set((state) => {
+      if (!state.document || state.document.moduleId !== 'loaded-svg') return state
+      const contentLayer = state.document.layers.find(
+        (l) => l.module === 'loaded-svg' && l.layerRole === 'content',
+      )
+      const cfg = contentLayer ? getLoadedSvgConfig(contentLayer) : null
+      if (!cfg) return state
+
+      const rotation = normalizeRotation(cfg.placement.rotation + deltaDegrees)
+      const placement = { ...cfg.placement, rotation }
+
+      return {
+        document: {
+          ...state.document,
+          layers: state.document.layers.map((l) => {
+            if (l.module !== 'loaded-svg') return l
+            const c = l.moduleConfig as unknown as typeof cfg
+            if (c.groupId !== cfg.groupId) return l
+            return {
+              ...l,
+              moduleConfig: { ...cfg, placement } as unknown as Record<string, unknown>,
+            }
+          }),
+        },
+      }
+    }),
+
+  updateChainConfig: (patch) =>
+    set((state) => {
+      if (!state.document || state.document.moduleId !== 'chain') return state
+      const refLayer = state.document.layers.find((l) => l.module === 'chain' && l.layerRole === 'calendar')
+      const cfg = refLayer ? getChainConfig(refLayer) : null
+      if (!cfg) return state
+
+      const next: ChainConfig = {
+        ...cfg,
+        ...patch,
+        days: patch.days != null ? clampDays(patch.days) : cfg.days,
+        goalTitle: patch.goalTitle != null ? patch.goalTitle : cfg.goalTitle,
+      }
+
+      return {
+        document: {
+          ...state.document,
+          layers: state.document.layers.map((l) => {
+            if (l.module !== 'chain') return l
+            const c = l.moduleConfig as unknown as ChainConfig
+            if (c.groupId !== cfg.groupId) return l
+            return { ...l, moduleConfig: next as unknown as Record<string, unknown> }
           }),
         },
       }

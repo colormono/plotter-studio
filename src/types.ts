@@ -2,7 +2,7 @@ export type PaperFormat = 'A4' | 'A3' | 'Letter' | 'Legal' | 'Square'
 
 export type Technique = 'draw' | 'cut' | 'mixed'
 
-export type ModuleId = 'grid' | 'tictactoe' | 'test-sheet'
+export type ModuleId = 'grid' | 'tictactoe' | 'test-sheet' | 'loaded-svg' | 'chain'
 
 /** Semantic roles shared across modules. */
 export type LayerRole =
@@ -14,6 +14,8 @@ export type LayerRole =
   | 'board'
   | 'player-x'
   | 'player-o'
+  | 'title'
+  | 'calendar'
 
 /** @deprecated Use LayerRole */
 export type GridLayerRole = 'cut' | 'frame' | 'fill' | 'organic' | 'accent'
