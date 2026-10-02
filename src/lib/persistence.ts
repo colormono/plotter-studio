@@ -1,5 +1,6 @@
 import { PlotterDocument } from '../types'
 import { migrateDocument, isModernDocument } from './migrate-document'
+import { ensureGridStructureLayer } from './module-layers'
 
 export function normalizeDocument(doc: PlotterDocument): PlotterDocument {
   if (!doc.moduleId || doc.layers.some((l) => l.gridRole && !l.layerRole)) {
@@ -16,13 +17,19 @@ export function normalizeDocument(doc: PlotterDocument): PlotterDocument {
       cellPadding: doc.grid?.cellPadding ?? 0.12,
       scaleMode: doc.grid?.scaleMode ?? 'proportional',
     },
-    layers: doc.layers.map((l, i) => ({
-      ...l,
-      order: i,
-      collectionWeight: l.collectionWeight ?? (l.layerRole === 'content' ? 3 : 0),
-      emptySpace: l.emptySpace ?? 0,
-    })),
+    layers: normalizeLayers(doc),
   }
+}
+
+function normalizeLayers(doc: PlotterDocument): PlotterDocument['layers'] {
+  const layers = doc.layers.map((l, i) => ({
+    ...l,
+    order: i,
+    collectionWeight: l.collectionWeight ?? (l.layerRole === 'content' ? 3 : 0),
+    emptySpace: l.emptySpace ?? 0,
+  }))
+  if (doc.moduleId !== 'grid') return layers
+  return ensureGridStructureLayer(layers, doc.structure !== false)
 }
 
 export const AUTOSAVE_KEY = 'plotter-studio:autosave'

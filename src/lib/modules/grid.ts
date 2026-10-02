@@ -12,7 +12,6 @@ function documentCacheKey(document: PlotterDocument): string {
     landscape: document.landscape,
     margin: document.margin,
     seed: document.seed,
-    structure: document.structure,
     grid: document.grid,
     layers: document.layers.map((l) => ({
       id: l.id,

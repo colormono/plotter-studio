@@ -7,7 +7,7 @@ import {
   GridSpec,
   ModuleId,
 } from '../types'
-import { saveAutosave } from '../lib/persistence'
+import { loadAutosave, saveAutosave } from '../lib/persistence'
 import {
   createGridContentLayer,
   createLayersForModule,
@@ -40,7 +40,6 @@ interface DocumentState {
   updatePaperFormat: (paperFormat: PaperFormat) => void
   updateLandscape: (landscape: boolean) => void
   updateMargin: (margin: number) => void
-  updateStructure: (structure: boolean) => void
   regenerate: () => void
   addGridLayer: (name: string, penColor: string, technique: Technique) => void
   regenerateTicTacToe: (layerId: string) => void
@@ -57,14 +56,22 @@ function makeId(): string {
   return crypto.randomUUID()
 }
 
+function initialSession(): Pick<DocumentState, 'document' | 'activeLayerId'> {
+  const saved = loadAutosave()
+  if (!saved) return { document: null, activeLayerId: null }
+  return { document: saved, activeLayerId: defaultActiveLayerId(saved.layers) }
+}
+
+const restored = initialSession()
+
 function defaultCollectionForTechnique(technique: Technique): string {
   const options = collectionsForTechnique(technique)
   return options[0] ?? 'regular-textures'
 }
 
 export const useDocumentStore = create<DocumentState>((set, get) => ({
-  document: null,
-  activeLayerId: null,
+  document: restored.document,
+  activeLayerId: restored.activeLayerId,
 
   createDocument: (name, paperFormat) => {
     const layers = createLayersForModule('grid')
@@ -157,12 +164,6 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set((state) => {
       if (!state.document) return state
       return { document: { ...state.document, margin: Math.max(4, margin) } }
-    }),
-
-  updateStructure: (structure) =>
-    set((state) => {
-      if (!state.document) return state
-      return { document: { ...state.document, structure } }
     }),
 
   regenerate: () =>

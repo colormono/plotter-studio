@@ -244,10 +244,54 @@ export function AppShell() {
         </div>
       )}
 
-      <aside className="rail rail--l" aria-label="Módulos y capas">
+      <aside className="rail rail--l" aria-label="Documento">
         <PaperPanel />
         <ModulePanel activeModule={activeModule} onModule={handleModuleChange} />
-        <LayerPanel />
+        <div className="sec sec--grow">
+          <div className="sec__h">
+            <span className="sec__t">Exportar</span>
+          </div>
+          {exportStats && (
+            <>
+              <div className="kv">
+                <span className="k">formato</span>
+                <span className="v">{exportStats.size}</span>
+              </div>
+              <div className="kv">
+                <span className="k">capas visibles</span>
+                <span className="v">{exportStats.layers}</span>
+              </div>
+              <div className="kv">
+                <span className="k">trazos</span>
+                <span className="v">{exportStats.prims}</span>
+              </div>
+              <div className="kv">
+                <span className="k">celdas</span>
+                <span className="v">{exportStats.cells}</span>
+              </div>
+            </>
+          )}
+          <div
+            className="callout"
+            style={{
+              background: 'var(--surface-tint)',
+              border: '1px solid var(--hairline)',
+              color: 'var(--mute)',
+            }}
+          >
+            <Icon icon={ShieldCheck} size={15} strokeWidth={1.75} />
+            <span>Al exportar se sanitiza el SVG: se eliminan rellenos, filtros y degradados.</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn--primary"
+            style={{ width: '100%', height: 34 }}
+            onClick={handleExport}
+          >
+            <Icon icon={Download} size={15} strokeWidth={1.75} />
+            Exportar SVG
+          </button>
+        </div>
       </aside>
 
       <main className="stage">
@@ -261,55 +305,7 @@ export function AppShell() {
       </main>
 
       <aside className="rail rail--r" aria-label="Parámetros">
-        {activeModule === 'grid' && (
-          <>
-            <GridConfigPanel art={art} />
-            <CollectionsPanel />
-            {exportStats && (
-              <div className="sec">
-                <div className="sec__h">
-                  <span className="sec__t">Exportar</span>
-                </div>
-                <div className="kv">
-                  <span className="k">formato</span>
-                  <span className="v">{exportStats.size}</span>
-                </div>
-                <div className="kv">
-                  <span className="k">capas visibles</span>
-                  <span className="v">{exportStats.layers}</span>
-                </div>
-                <div className="kv">
-                  <span className="k">trazos</span>
-                  <span className="v">{exportStats.prims}</span>
-                </div>
-                <div className="kv">
-                  <span className="k">celdas</span>
-                  <span className="v">{exportStats.cells}</span>
-                </div>
-                <div
-                  className="callout"
-                  style={{
-                    background: 'var(--surface-tint)',
-                    border: '1px solid var(--hairline)',
-                    color: 'var(--mute)',
-                  }}
-                >
-                  <Icon icon={ShieldCheck} size={15} strokeWidth={1.75} />
-                  <span>Al exportar se sanitiza el SVG: se eliminan rellenos, filtros y degradados.</span>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  style={{ width: '100%', height: 34, marginTop: 8 }}
-                  onClick={handleExport}
-                >
-                  <Icon icon={Download} size={15} strokeWidth={1.75} />
-                  Exportar SVG
-                </button>
-              </div>
-            )}
-          </>
-        )}
+        {activeModule === 'grid' && <GridConfigPanel art={art} />}
         {activeModule === 'tictactoe' && <TicTacToePanel />}
         {activeModule === 'loaded-svg' && <LoadedSvgPanel />}
         {activeModule === 'chain' && <ChainPanel />}
@@ -323,6 +319,8 @@ export function AppShell() {
             </p>
           </div>
         )}
+        <LayerPanel />
+        <CollectionsPanel />
       </aside>
     </div>
   )

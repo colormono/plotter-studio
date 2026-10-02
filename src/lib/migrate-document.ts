@@ -106,7 +106,7 @@ function normalizeLayer(layer: Layer, moduleId: ModuleId, order: number): Layer 
     collectionWeight: layer.collectionWeight ?? (layerRole === 'content' ? 3 : 0),
     emptySpace:
       layer.emptySpace ??
-      (layer.primaryCollection === 'silence' && layerRole === 'content' ? 5 : 0),
+      (layer.primaryCollection === 'silence' && layerRole === 'content' ? 8 : 0),
     primaryCollection:
       layer.primaryCollection === 'silence' || !layer.primaryCollection
         ? layer.gridRole
@@ -119,9 +119,9 @@ function normalizeLayer(layer: Layer, moduleId: ModuleId, order: number): Layer 
   }
 }
 
-function migrateGridLayers(legacyLayers: Layer[]): Layer[] {
+function migrateGridLayers(legacyLayers: Layer[], showStructure = true): Layer[] {
   const defaults = createGridModuleLayers()
-  const fixedRoles: LayerRole[] = ['registration', 'cut-border', 'frame']
+  const fixedRoles: LayerRole[] = ['registration', 'cut-border', 'frame', 'structure']
   const result: Layer[] = []
 
   for (const role of fixedRoles) {
@@ -132,7 +132,11 @@ function migrateGridLayers(legacyLayers: Layer[]): Layer[] {
     result.push(
       existing
         ? normalizeLayer({ ...def, ...existing, layerRole: role }, 'grid', result.length)
-        : { ...def, order: result.length },
+        : {
+            ...def,
+            order: result.length,
+            visible: role === 'structure' ? showStructure : def.visible,
+          },
     )
   }
 
@@ -168,7 +172,10 @@ export function migrateDocument(raw: LegacyDocument): PlotterDocument {
   if (raw.grid && raw.seed != null) {
     let layers: Layer[]
     if (moduleId === 'grid') {
-      layers = migrateGridLayers(raw.layers.filter((l) => l.module === 'grid' || l.gridRole))
+      layers = migrateGridLayers(
+        raw.layers.filter((l) => l.module === 'grid' || l.gridRole),
+        raw.structure ?? true,
+      )
     } else {
       layers = createLayersForModule(moduleId).map((def, i) => {
         const legacy = raw.layers.find((l) => l.module === moduleId && l.order === i)
@@ -200,7 +207,7 @@ export function migrateDocument(raw: LegacyDocument): PlotterDocument {
 
   const layers =
     resolvedModule === 'grid'
-      ? migrateGridLayers(gridLayers)
+      ? migrateGridLayers(gridLayers, raw.structure ?? true)
       : createLayersForModule(resolvedModule)
 
   return {

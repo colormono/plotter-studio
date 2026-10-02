@@ -340,6 +340,32 @@ textarea {
   flex: 1;
 }
 
+.layer-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mute);
+}
+
+.layer-active .pen {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.layer-active__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sec__h {
   display: flex;
   align-items: center;
@@ -374,6 +400,10 @@ textarea {
   color: var(--mute);
   line-height: 15px;
   margin: 0;
+}
+
+.help.is-low {
+  color: #9a7b52;
 }
 
 /* ===== modules ===== */
@@ -701,6 +731,11 @@ textarea {
   color: var(--ink);
 }
 
+.ctl-h.is-quiet .lbl,
+.ctl-h.is-quiet .num {
+  color: var(--mute);
+}
+
 .stepper {
   display: inline-flex;
   align-items: center;
@@ -724,6 +759,25 @@ textarea {
 
 .stepper button:hover {
   background: var(--surface-soft);
+}
+
+.stepper button:disabled {
+  color: var(--mute);
+  opacity: 0.35;
+  cursor: default;
+}
+
+.stepper button:disabled:hover {
+  background: var(--surface);
+}
+
+.stepper.is-wide {
+  display: flex;
+  width: 100%;
+}
+
+.stepper.is-wide .v {
+  flex: 1;
 }
 
 .stepper .v {
@@ -767,6 +821,14 @@ input[type='range'].rg::-moz-range-thumb {
   background: var(--ink);
   cursor: pointer;
   border: 2px solid var(--surface);
+}
+
+input[type='range'].rg:disabled {
+  opacity: 0.35;
+}
+
+input[type='range'].rg:disabled::-webkit-slider-thumb {
+  cursor: default;
 }
 
 .seg {

@@ -1,4 +1,4 @@
-import { Check, Dices, Grid3x3, Minus, Plus, TriangleAlert } from 'lucide-react'
+import { Dices, Grid3x3, Minus, Plus } from 'lucide-react'
 import { useDocumentStore } from '../store/document'
 import { GeneratedArt } from '../lib/art-engine'
 import { Icon } from './Icon'
@@ -11,33 +11,54 @@ function Stepper({
   value,
   min,
   max,
+  label,
   onChange,
 }: {
   value: number
   min: number
   max: number
+  label: string
   onChange: (v: number) => void
 }) {
   return (
-    <div className="stepper">
-      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} aria-label="Menos">
+    <div className="stepper is-wide">
+      <button
+        type="button"
+        onClick={() => onChange(value - 1)}
+        disabled={value <= min}
+        aria-label={`Menos ${label}`}
+      >
         <Icon icon={Minus} size={13} strokeWidth={1.75} />
       </button>
       <span className="v">{value}</span>
-      <button type="button" onClick={() => onChange(Math.min(max, value + 1))} aria-label="Más">
+      <button
+        type="button"
+        onClick={() => onChange(value + 1)}
+        disabled={value >= max}
+        aria-label={`Más ${label}`}
+      >
         <Icon icon={Plus} size={13} strokeWidth={1.75} />
       </button>
     </div>
   )
 }
 
-function SwitchT({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+function SwitchT({
+  label,
+  on,
+  onChange,
+}: {
+  label: string
+  on: boolean
+  onChange: (v: boolean) => void
+}) {
   return (
     <button
       type="button"
       className={'sw-t' + (on ? '' : ' off')}
       role="switch"
       aria-checked={on}
+      aria-label={label}
       onClick={() => onChange(!on)}
     />
   )
@@ -46,7 +67,6 @@ function SwitchT({ on, onChange }: { on: boolean; onChange: (v: boolean) => void
 export function GridConfigPanel({ art }: GridConfigPanelProps) {
   const document = useDocumentStore((s) => s.document)
   const updateGrid = useDocumentStore((s) => s.updateGrid)
-  const updateStructure = useDocumentStore((s) => s.updateStructure)
   const regenerate = useDocumentStore((s) => s.regenerate)
 
   if (!document) return null
@@ -88,6 +108,7 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
               <span className="lbl">Filas</span>
             </div>
             <Stepper
+              label="filas"
               value={g.rows}
               min={1}
               max={16}
@@ -99,6 +120,7 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
               <span className="lbl">Columnas</span>
             </div>
             <Stepper
+              label="columnas"
               value={g.cols}
               min={1}
               max={16}
@@ -109,23 +131,55 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
 
         <div className="field">
           <div className="ctl-h">
-            <span className="lbl">Profundidad de subgrillas</span>
-            <span className="num">{g.depth}</span>
+            <span className="lbl">Profundidad</span>
           </div>
-          <input
-            className="rg"
-            type="range"
-            min={0}
-            max={4}
-            step={1}
-            value={g.depth}
-            onChange={(e) => updateGrid({ depth: +e.target.value })}
-          />
+          <div className="seg" role="group" aria-label="Profundidad de subgrillas">
+            {[0, 1, 2, 3, 4].map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={g.depth === level ? 'is-on' : ''}
+                aria-pressed={g.depth === level}
+                onClick={() => updateGrid({ depth: level })}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          <p className="help">0 es la grilla base. Cada nivel puede partir una celda.</p>
         </div>
 
         <div className="field">
           <div className="ctl-h">
-            <span className="lbl">Prob. de subdivisión</span>
+            <span className="lbl">Grilla irregular</span>
+            <SwitchT
+              label="Grilla irregular"
+              on={g.irregular}
+              onChange={(v) => updateGrid({ irregular: v })}
+            />
+          </div>
+          <p className="help">Reparte la base con anchos distintos.</p>
+        </div>
+
+        <div className="field">
+          <div className="ctl-h">
+            <span className="lbl">Llenar la celda</span>
+            <SwitchT
+              label="Llenar la celda"
+              on={g.scaleMode === 'fit'}
+              onChange={(fill) => updateGrid({ scaleMode: fill ? 'fit' : 'proportional' })}
+            />
+          </div>
+          <p className="help">
+            {g.scaleMode === 'fit'
+              ? 'El dibujo ocupa el rectángulo de la celda.'
+              : 'El dibujo cabe en un cuadrado dentro de la celda.'}
+          </p>
+        </div>
+
+        <div className="field">
+          <div className={'ctl-h' + (g.depth === 0 ? ' is-quiet' : '')}>
+            <span className="lbl">Probabilidad</span>
             <span className="num">{Math.round(g.splitProb * 100)}%</span>
           </div>
           <input
@@ -135,22 +189,16 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
             max={1}
             step={0.05}
             value={g.splitProb}
+            disabled={g.depth === 0}
             onChange={(e) => updateGrid({ splitProb: +e.target.value })}
+            aria-label="Probabilidad de partir celdas"
           />
-        </div>
-
-        <div className="ctl-h">
-          <span className="lbl">Grilla irregular (pesos)</span>
-          <SwitchT on={g.irregular} onChange={(v) => updateGrid({ irregular: v })} />
-        </div>
-        <div className="ctl-h">
-          <span className="lbl">Mostrar estructura</span>
-          <SwitchT on={document.structure} onChange={updateStructure} />
+          {g.depth === 0 && <p className="help">Con profundidad 0 no se parten celdas.</p>}
         </div>
 
         <div className="field">
           <div className="ctl-h">
-            <span className="lbl">Padding de celda</span>
+            <span className="lbl">Margen interno</span>
             <span className="num">{Math.round(g.cellPadding * 100)}%</span>
           </div>
           <input
@@ -161,32 +209,8 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
             step={0.01}
             value={g.cellPadding}
             onChange={(e) => updateGrid({ cellPadding: +e.target.value })}
-            aria-label="Padding interno de celda"
+            aria-label="Margen interno de celda"
           />
-        </div>
-
-        <div className="field">
-          <div className="ctl-h">
-            <span className="lbl">Escala de patrón</span>
-          </div>
-          <div className="row2">
-            <button
-              type="button"
-              className={'btn' + (g.scaleMode === 'proportional' ? ' btn--primary' : '')}
-              style={{ flex: 1, height: 30 }}
-              onClick={() => updateGrid({ scaleMode: 'proportional' })}
-            >
-              Proporcional
-            </button>
-            <button
-              type="button"
-              className={'btn' + (g.scaleMode === 'fit' ? ' btn--primary' : '')}
-              style={{ flex: 1, height: 30 }}
-              onClick={() => updateGrid({ scaleMode: 'fit' })}
-            >
-              Forzado
-            </button>
-          </div>
         </div>
       </div>
 
@@ -209,23 +233,13 @@ export function GridConfigPanel({ art }: GridConfigPanelProps) {
             onChange={(e) => updateGrid({ threshold: +e.target.value })}
           />
         </div>
-        {art &&
-          (tooSmall ? (
-            <div className="callout warn" role="alert">
-              <Icon icon={TriangleAlert} size={15} strokeWidth={1.75} />
-              <span>
-                Celda más chica <b>{minMM.toFixed(1)} mm</b> &lt; umbral{' '}
-                <b>{g.threshold} mm</b>. Reduce profundidad o filas.
-              </span>
-            </div>
-          ) : (
-            <div className="callout ok" role="status">
-              <Icon icon={Check} size={15} strokeWidth={1.75} />
-              <span>
-                Celda más chica <b>{minMM.toFixed(1)} mm</b> — {art.stats.cellCount} celdas.
-              </span>
-            </div>
-          ))}
+        {art && (
+          <p className={'help' + (tooSmall ? ' is-low' : '')} role="status">
+            {tooSmall
+              ? `Celda más chica ${minMM.toFixed(1)} mm, bajo el umbral de ${g.threshold.toFixed(1)} mm.`
+              : `Celda más chica ${minMM.toFixed(1)} mm, en ${art.stats.cellCount} celdas.`}
+          </p>
+        )}
       </div>
     </>
   )

@@ -112,6 +112,7 @@ function clipLine(
 }
 
 function hatch(b: Bounds, angleDeg: number, spacing: number): Primitive[] {
+  if (b.w <= 0 || b.h <= 0 || spacing <= 0) return []
   const out: Primitive[] = []
   const a = (angleDeg * Math.PI) / 180
   const dx = Math.cos(a)
@@ -126,28 +127,43 @@ function hatch(b: Bounds, angleDeg: number, spacing: number): Primitive[] {
   ]
   let cmin = Infinity
   let cmax = -Infinity
+  let tmin = Infinity
+  let tmax = -Infinity
   for (const [cx, cy] of corners) {
     const c = cx * nx + cy * ny
+    const t = cx * dx + cy * dy
     if (c < cmin) cmin = c
     if (c > cmax) cmax = c
+    if (t < tmin) tmin = t
+    if (t > tmax) tmax = t
   }
-  const start = Math.ceil(cmin / spacing) * spacing
-  const BIG = (b.w + b.h) * 2
-  for (let c = start; c <= cmax; c += spacing) {
+
+  const pushAt = (c: number) => {
     const px = nx * c
     const py = ny * c
+    const tAnchor = px * dx + py * dy
+    // Extend past the cell's projection so Liang–Barsky still hits the rect
+    // when the cell sits far from the origin.
+    const pad = Math.max(b.w, b.h, 1)
     const seg = clipLine(
-      px - dx * BIG,
-      py - dy * BIG,
-      px + dx * BIG,
-      py + dy * BIG,
+      px + dx * (tmin - tAnchor - pad),
+      py + dy * (tmin - tAnchor - pad),
+      px + dx * (tmax - tAnchor + pad),
+      py + dy * (tmax - tAnchor + pad),
       b.x,
       b.y,
       b.x + b.w,
       b.y + b.h,
     )
-    if (seg) out.push({ k: 'line', x1: seg[0], y1: seg[1], x2: seg[2], y2: seg[3] })
+    if (!seg) return
+    if (Math.hypot(seg[2] - seg[0], seg[3] - seg[1]) < 1e-4) return
+    out.push({ k: 'line', x1: seg[0], y1: seg[1], x2: seg[2], y2: seg[3] })
   }
+
+  const eps = Math.max(spacing * 1e-6, 1e-6)
+  const start = Math.ceil((cmin - eps) / spacing) * spacing
+  for (let c = start; c <= cmax + eps; c += spacing) pushAt(c)
+  if (out.length === 0) pushAt((cmin + cmax) / 2)
   return out
 }
 
@@ -168,6 +184,7 @@ const COLLECTION_RENDERERS: Record<
         const rmax = Math.min(b.w, b.h) / 2
         const step = rnd(rng, 1.6, 2.6)
         for (let r = rmax; r > 0.4; r -= step) out.push({ k: 'circle', cx, cy, r })
+        if (out.length === 0 && rmax > 0) out.push({ k: 'circle', cx, cy, r: rmax })
         return out
       }
       if (style === 'cross') return [...hatch(b, 0, sp), ...hatch(b, 90, sp)]
@@ -391,9 +408,13 @@ function chooseContentLayer(
   return candidates[0]!
 }
 
+/** 0 = no empty cells, 10 = every assigned cell stays empty. */
+export const EMPTY_SPACE_MAX = 10
+
 function shouldLeaveEmpty(rng: () => number, emptySpace: number): boolean {
   if (emptySpace <= 0) return false
-  return rng() * 6 < emptySpace
+  if (emptySpace >= EMPTY_SPACE_MAX) return true
+  return rng() < emptySpace / EMPTY_SPACE_MAX
 }
 
 export const DEFAULT_GRID_SPEC: GridSpec = {
@@ -431,6 +452,7 @@ export function generateArt(document: PlotterDocument): GeneratedArt {
 
   const cutBorder = document.layers.find((l) => l.layerRole === 'cut-border')
   const frame = document.layers.find((l) => l.layerRole === 'frame')
+  const structureLayer = document.layers.find((l) => l.layerRole === 'structure')
   const contentLayers = document.layers.filter(isContentLayer)
 
   if (cutBorder) {
@@ -447,12 +469,10 @@ export function generateArt(document: PlotterDocument): GeneratedArt {
   }
 
   for (const cell of cells) {
-    if (document.structure && frame) {
-      pushPrimitives(
-        byLayerId[frame.id]!,
-        [{ k: 'rect', x: cell.x, y: cell.y, w: cell.width, h: cell.height, faint: true }],
-        true,
-      )
+    if (structureLayer) {
+      pushPrimitives(byLayerId[structureLayer.id]!, [
+        { k: 'rect', x: cell.x, y: cell.y, w: cell.width, h: cell.height },
+      ])
     }
 
     const layer = chooseContentLayer(rng, contentLayers)

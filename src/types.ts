@@ -9,6 +9,7 @@ export type LayerRole =
   | 'registration'
   | 'cut-border'
   | 'frame'
+  | 'structure'
   | 'content'
   | 'cut'
   | 'board'
@@ -50,6 +51,7 @@ export interface PlotterDocument {
   landscape: boolean
   margin: number
   seed: number
+  /** @deprecated Visibility of the Estructura layer replaces this flag. Kept for older documents. */
   structure: boolean
   grid: GridSpec
   /** @deprecated Kept for migration only. */
@@ -66,9 +68,9 @@ export interface Layer {
   order: number
   primaryCollection: string
   secondaryCollection: string | null
-  /** Relative weight when picking a layer for each grid cell. */
+  /** Relative weight when picking a layer for each grid cell, from 0 (none) to 10. */
   collectionWeight: number
-  /** Probability of leaving assigned cells empty (0–6, like grid weight). */
+  /** Share of assigned cells left empty, from 0 (none) to 10 (all). */
   emptySpace: number
   module: string
   layerRole?: LayerRole

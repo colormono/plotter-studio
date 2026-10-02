@@ -59,7 +59,7 @@ export function LayerPanel() {
   }
 
   return (
-    <div className="sec sec--grow">
+    <div className="sec">
       <div className="sec__h">
         <span className="sec__t">Capas</span>
         {isGrid && (

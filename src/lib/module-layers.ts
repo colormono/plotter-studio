@@ -42,7 +42,10 @@ function registrationLayer(order: number, module: string): Layer {
 
 export function isFixedLayer(layer: Layer): boolean {
   if (layer.layerRole === 'registration') return true
-  if (layer.module === 'grid' && (layer.layerRole === 'frame' || layer.layerRole === 'cut-border')) {
+  if (
+    layer.module === 'grid' &&
+    (layer.layerRole === 'frame' || layer.layerRole === 'cut-border' || layer.layerRole === 'structure')
+  ) {
     return true
   }
   if (
@@ -88,6 +91,34 @@ export function createGridContentLayer(
   }
 }
 
+function gridStructureLayer(order: number): Layer {
+  return {
+    ...baseLayer({
+      name: 'Estructura',
+      penColor: '#0A0A0A',
+      technique: 'draw',
+      order,
+      layerRole: 'structure',
+      primaryCollection: 'regular-textures',
+      collectionWeight: 0,
+    }),
+    module: 'grid',
+  }
+}
+
+/** Inserts the grid structure layer when an older document does not have one. */
+export function ensureGridStructureLayer(layers: Layer[], visible = true): Layer[] {
+  if (layers.some((l) => l.layerRole === 'structure')) return layers
+  const frameIndex = layers.findIndex((l) => l.layerRole === 'frame')
+  const insertAt = frameIndex >= 0 ? frameIndex + 1 : layers.length
+  const next = [
+    ...layers.slice(0, insertAt),
+    { ...gridStructureLayer(insertAt), visible },
+    ...layers.slice(insertAt),
+  ]
+  return next.map((layer, order) => ({ ...layer, order }))
+}
+
 export function createGridModuleLayers(): Layer[] {
   return [
     registrationLayer(0, 'grid'),
@@ -115,7 +146,8 @@ export function createGridModuleLayers(): Layer[] {
       }),
       module: 'grid',
     },
-    createGridContentLayer('Tramas', '#0A0A0A', 'draw', 3, 'regular-textures'),
+    gridStructureLayer(3),
+    createGridContentLayer('Tramas', '#0A0A0A', 'draw', 4, 'regular-textures'),
   ]
 }
 
